@@ -1,2 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<metadata xml:lang="zh"><Esri><CreaDate>20200908</CreaDate><CreaTime>10411100</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce><DataProperties><lineage><Process ToolSource="c:\program files (x86)\arcgis\desktop10.0\ArcToolbox\Toolboxes\3D Analyst Tools.tbx\RasterToMultipoint" Date="20200908" Time="104111">RasterToMultipoint nanshanDEM G:\GIS\Method\GIS2020\L1\GData1\nsPT.shp # NO_THIN MIN 1</Process></lineage></DataProperties></Esri></metadata>

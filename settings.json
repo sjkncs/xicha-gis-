@@ -1,7 +1,0 @@
-{
-  "python.analysis.extraPaths": ["."],
-  "python.analysis.ignore": ["**/*.ipynb"],
-  "python.analysis.diagnosticSeverityOverrides": {
-    "reportMissingImports": "none"
-  }
-}
