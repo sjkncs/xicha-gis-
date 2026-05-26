@@ -1,0 +1,17 @@
+
+数据输出目录: E:\xicha gis 智能定位\15分钟城市时间贫困研究\osm_data
+
+下载的数据:
+  ✓ 道路网络: 0 节点, 0 边
+  ✓ POI兴趣点: 0 条
+  ✓ 建筑轮廓: 0 栋
+
+数据来源: OpenStreetMap (CC BY-SA 4.0)
+坐标系: WGS84 (EPSG:4326)
+
+下一步:
+  1. 安装高德API Python SDK: pip install requests
+  2. 申请高德API Key: https://lbs.amap.com
+  3. 运行 collect_amap_hours.py 采集设施营业时间
+  4. 运行 core_framework.py 进行时间贫困分析
+        

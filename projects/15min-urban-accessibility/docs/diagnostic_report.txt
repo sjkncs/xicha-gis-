@@ -1,0 +1,49 @@
+File size: 144,357 bytes
+JSON valid, 35 cells
+Cell 0 length: 1900 chars
+Garbled chars in first 500: 245
+Sample garbled chars: ['æ=0xe6', '·=0xb7', '±=0xb1', 'å=0xe5', '\x9c=0x9c']
+Chars in UTF-8 byte range (0x80-0xFF): 245
+Has 0xc3 bytes: no
+Double-decode fix works: yes
+CJK chars in fixed text: 27
+Sample fixed text: # 深圳市南山区 15 分钟城市时间贫困研究
+
+**— 基于改进两步移动搜索法 (Mod
+
+=== All 35 cells ===
+Cell  0 | markdown | garbled: 1209 | cjk:    0 | # æ·±å³å¸åå±±åº 15 åéåå¸æ¶é
+Cell  1 | markdown | garbled:   27 | cjk:    0 | <a id='1'></a>
+Cell  2 | code     | garbled:   24 | cjk:    0 | # å®è£ææå¿éä¾èµ
+Cell  3 | code     | garbled:   69 | cjk:    0 | import warnings
+Cell  4 | markdown | garbled:  261 | cjk:    0 | <a id='2'></a>
+Cell  5 | code     | garbled:  501 | cjk:    0 | # ======================================
+Cell  6 | code     | garbled:  303 | cjk:    0 | # ======================================
+Cell  7 | code     | garbled:   66 | cjk:    0 | # è·¯ç½å¯è§å
+Cell  8 | markdown | garbled:  174 | cjk:    0 | <a id='3'></a>
+Cell  9 | code     | garbled:  231 | cjk:    0 | # ======================================
+Cell 10 | code     | garbled:  567 | cjk:    0 | # ======================================
+Cell 11 | markdown | garbled: 1104 | cjk:    0 | <a id='3b'></a>
+Cell 12 | code     | garbled: 2381 | cjk:    0 | # ======================================
+Cell 13 | code     | garbled: 1505 | cjk:    0 | # ======================================
+Cell 14 | code     | garbled: 1392 | cjk:    0 | # ======================================
+Cell 15 | markdown | garbled:  687 | cjk:    0 | <a id='4'></a>
+Cell 16 | code     | garbled: 1137 | cjk:    0 | # ======================================
+Cell 17 | code     | garbled:  672 | cjk:    0 | # ======================================
+Cell 18 | code     | garbled:  174 | cjk:    0 | # ======================================
+Cell 19 | code     | garbled:  324 | cjk:    0 | # ======================================
+Cell 20 | markdown | garbled:  342 | cjk:    0 | <a id='5'></a>
+Cell 21 | code     | garbled:  419 | cjk:    0 | # ======================================
+Cell 22 | markdown | garbled:  315 | cjk:    0 | <a id='6'></a>
+Cell 23 | code     | garbled:  399 | cjk:    0 | # ======================================
+Cell 24 | code     | garbled:  156 | cjk:    0 | # ======================================
+Cell 25 | markdown | garbled:  714 | cjk:    0 | <a id='6b'></a>
+Cell 26 | code     | garbled: 2828 | cjk:    0 | # ======================================
+Cell 27 | code     | garbled:  342 | cjk:    0 | # ======================================
+Cell 28 | code     | garbled:  327 | cjk:    0 | # ======================================
+Cell 29 | code     | garbled:  231 | cjk:    0 | # ======================================
+Cell 30 | markdown | garbled:  180 | cjk:    0 | <a id='8'></a>
+Cell 31 | code     | garbled:  447 | cjk:    0 | # ======================================
+Cell 32 | code     | garbled:  258 | cjk:    0 | # ======================================
+Cell 33 | code     | garbled:  321 | cjk:    0 | # ======================================
+Cell 34 | markdown | garbled: 2891 | cjk:    0 | <a id='9'></a>

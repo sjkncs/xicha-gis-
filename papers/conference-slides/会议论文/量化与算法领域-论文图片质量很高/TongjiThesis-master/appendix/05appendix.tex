@@ -1,0 +1,71 @@
+% \section*{致谢}
+
+% 本研究得到了相关基金项目的支持。感谢所有参与数据收集和实验验证的团队成员。
+
+% \appendix
+
+% \section{附录：孪生对抗详细实验数据}
+
+% \subsection{所有合约的完整性能统计}
+
+% \begin{sidewaystable}[htbp]
+% \centering
+% \caption{所有合约的Baseline vs MGCA最佳配置全面对比}
+% \label{tab:allContractSummary}
+% \scriptsize
+% \setlength{\tabcolsep}{2.5pt}
+% \renewcommand{\arraystretch}{1.05}
+% \begin{tabular}{@{}lcccccclcccl@{}}
+% \toprule
+% 合约 & \multicolumn{3}{c}{Baseline} & & \multicolumn{3}{c}{MGCA最佳} & & \multicolumn{2}{c}{对比} & \\
+% \cmidrule(lr){2-4} \cmidrule(lr){6-8} \cmidrule(lr){10-11}
+%  & 配置 & 交易次数 & 夏普 & & 配置 & 交易次数 & 夏普 & & $\Delta$夏普 & 提升类型 & 胜率变化 \\
+% \midrule
+% IF9999 & TRANS+DIRECT    & 88  & 3.25    & & MGCA-010+Direct      & 72  & 3.96    & & +0.71   & 提升       & 50.00$\to$54.17 \\
+% IH9999 & TRANS+VAE       & 47  & 2.71    & & MGCA-001+VAE         & 72  & 3.39    & & +0.68   & 提升       & 40.43$\to$45.83 \\
+% ag9999 & TRANS+DIRECT    & 74  & 2.68    & & MGCA-011+VAE         & 141 & 3.16    & & +0.48   & 提升       & 41.89$\to$51.77 \\
+% CF9999 & TRANS+DIRECT    & 85  & 0.76    & & MGCA-111+Direct      & 38  & 2.57    & & +1.81   & 转负为正   & 40.00$\to$36.84 \\
+% ni9999 & CNN+VAE         & 115 & 1.27    & & MGCA-001+Direct      & 125 & 2.20    & & +0.93   & 转负为正   & 37.39$\to$44.00 \\
+% c9999  & CNN+DIRECT      & 62  & 2.00    & & MGCA-000+Direct      & 144 & 1.27    & & $-$0.73 & 下降       & 41.94$\to$39.58 \\
+% m9999  & CNN+VAE         & 129 & 2.24    & & MGCA-011+Direct      & 163 & 1.09    & & $-$1.15 & 下降       & 41.86$\to$43.56 \\
+% i9999  & TRANS+VAE       & 222 & $-$0.10 & & MGCA-011+VAE         & 252 & 0.92    & & +1.02   & 转负为正   & 40.54$\to$37.70 \\
+% AP9999 & CNN+VAE         & 119 & 0.09    & & MGCA-101+Direct      & 83  & 0.82    & & +0.73   & 转负为正   & 45.38$\to$34.94 \\
+% sc9999 & CNN+DIRECT      & 394 & 0.40    & & MGCA-011+VAE         & 388 & 0.80    & & +0.40   & 转负为正   & 46.70$\to$47.42 \\
+% au9999 & TRANS+DIRECT    & 352 & 0.60    & & MGCA-000+VAE         & 399 & 0.60    & & 0.00    & 持平       & 47.73$\to$48.37 \\
+% % cu9999 & CNN+VAE         & 44  & 2.48    & & MGCA-111+VAE+Twin    & 48  & 0.57    & & $-$1.91 & 转负为正   & 45.45$\to$43.75 \\
+% % y9999  & CNN+VAE         & 78  & $-$0.27 & & MGCA-111+VAE+Twin    & 99  & 0.50    & & +0.77   & 转负为正   & 34.62$\to$41.41 \\
+% % pg9999 & CNN+VAE         & 105 & $-$0.52 & & MGCA-111+Direct+Twin & 241 & 0.50    & & +1.02   & 转负为正   & 43.81$\to$45.23 \\
+% TA9999 & TRANS+VAE       & 145 & $-$0.33 & & MGCA-100+VAE         & 241 & 0.24    & & +0.57   & 转负为正   & 37.24$\to$40.66 \\
+% rb9999 & TRANS+VAE       & 209 & $-$0.22 & & MGCA-111+Direct      & 199 & 0.14    & & +0.36   & 转负为正   & 38.76$\to$39.20 \\
+% OI9999 & TRANS+VAE       & 144 & 0.78    & & MGCA-100+Direct      & 189 & 0.07    & & $-$0.71 & 下降       & 48.61$\to$47.62 \\
+% UR9999 & CNN+DIRECT      & 135 & $-$1.96 & & MGCA-100+VAE         & 150 & $-$1.50 & & +0.46   & 改善       & 31.11$\to$30.67 \\
+% \bottomrule
+% \end{tabular}
+% \end{sidewaystable}
+
+% 表\ref{tab:allContractSummary}汇总了所有合约的完整性能对比。
+
+% \subsection{跨资产判别器性能详细统计}
+
+% \begin{sidewaystable}[htbp]
+% \centering
+% \caption{跨资产判别器性能详细统计}
+% \label{tab:discriminatorBYAsset}
+% \begin{tabular}{lccccccc}
+% \toprule
+% 资产类别 & 平均AUC & 最高AUC & 最低AUC & 中位数AUC & 平均准确率 & 最高准确率 & 判别器数 \\
+% \midrule
+% 国债 & 0.7304 & 0.8985 & 0.3577 & 0.7395 & 92.82\% & 99.81\% & 80 \\
+% 贵金属 & 0.6637 & 0.7314 & 0.4203 & 0.6753 & 82.22\% & 88.49\% & 80 \\
+% 股指 & 0.6341 & 0.7447 & 0.4810 & 0.6359 & 79.22\% & 85.66\% & 160 \\
+% 基础金属 & 0.6136 & 0.6884 & 0.4366 & 0.6163 & 86.11\% & 93.23\% & 160 \\
+% 农产品 & 0.5686 & 0.7329 & 0.4712 & 0.5499 & 76.18\% & 93.16\% & 560 \\
+% 能源 & 0.5442 & 0.6268 & 0.4678 & 0.5490 & 73.70\% & 81.03\% & 160 \\
+% 工业品 & 0.5209 & 0.5891 & 0.4889 & 0.5176 & 48.52\% & 73.40\% & 320 \\
+% \bottomrule
+% \end{tabular}
+% \end{sidewaystable}
+
+% 表\ref{tab:discriminatorBYAsset}展示了各资产类别的判别器性能详细统计。
+
+

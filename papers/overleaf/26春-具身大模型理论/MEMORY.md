@@ -1,0 +1,9 @@
+- 用户身份：数据科学与人工智能领域的计算机博士生。
+- 当前核心任务：在本地 Ollama 环境下部署 TableGPT2-7B 模型。
+- 技术约束：Ollama 仅支持 GGUF 格式，需将 HuggingFace 格式的 TableGPT2-7B 进行转换。
+- 环境偏好：项目目录已重命名为 `model_theory` 以避免中文路径和空格导致的命令行解析错误。
+- 依赖工具链：使用 ModelScope（魔搭社区）作为模型下载源以规避网络超时，使用 llama.cpp 进行模型格式转换。
+- 已知阻塞点：Ollama 服务需在独立终端窗口运行 (`ollama serve`) 以保持进程活跃；Windows CMD 对含中文/空格路径支持不佳，推荐使用 PowerShell。
+- 关键修正：Windows CMD 中切换目录应使用 `cd /d` 而非 `set location`，后者用于设置环境变量。
+- 下载优化：未设置 HF_TOKEN 会导致 HuggingFace 下载限速，国内环境首选 ModelScope 镜像或配置 `HF_ENDPOINT=https://hf-mirror.com`。
+- 凭证管理：HuggingFace Token 已通过系统环境变量 `HF_TOKEN` 永久配置到 Windows 用户变量中。

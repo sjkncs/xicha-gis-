@@ -1,0 +1,32 @@
+{
+  "$schema": "https://aka.ms/pyright/schemas/pyrightconfig.schema.json",
+  "include": [
+    "15min_urban_accessibility_SCI.ipynb"
+  ],
+  "exclude": [],
+  "venvPath": "",
+  "venv": "",
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": false,
+  "reportMissingTypeStubs": false,
+  "reportUnknownMemberType": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownParameterType": false,
+  "reportUnknownDefType": false,
+  "reportAttributeAccessIssue": false,
+  "reportCallIssue": false,
+  "reportOperatorIssue": false,
+  "reportGeneralTypeIssues": false,
+  "reportPossiblyUnboundVariable": false,
+  "pythonPlatform": "Windows",
+  "extraPaths": [
+    "."
+  ],
+  "includeSymbolUrlsInDiagnostics": false,
+  "executionEnvironment": [
+    {
+      "root": "."
+    }
+  ]
+}
