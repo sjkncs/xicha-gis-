@@ -26,3 +26,27 @@ organize2.py
 
 # OS
 Thumbs.db
+
+# Nested git repos (subprojects)
+projects/*/.git/
+projects/*/*/.git/
+projects/*/*/*/.git/
+.waqu-project/
+
+# Cache and temp directories
+projects/15min-urban-accessibility/cache/
+projects/15min-urban-accessibility/osm_data/cache/
+projects/15min-urban-accessibility/osm_data/poi_versions/
+projects/15min-urban-accessibility/building_data/temp/
+projects/15min-urban-accessibility/algorithms/deep_learning/models/runs/
+projects/15min-urban-accessibility/algorithms/deep_learning/models/logs/
+projects/15min-urban-accessibility/v2_real_data/cache/
+papers/overleaf/*/synctex.gz
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# OSM response cache
+osm_cache/
+overpass_cache/
+*.overpass.cache
