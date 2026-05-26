@@ -1,0 +1,439 @@
+\chapter*{符号表}
+\addcontentsline{toc}{chapter}{符号表}
+
+\noindent 本文使用了大量的物理量符号、缩略词、专门术语及自定义名词，为便于阅读，现将其汇总如下。
+
+%% ============================================================
+\section*{一、模型与框架缩略词}
+%% ============================================================
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{4cm} p{10cm}}
+\toprule
+\textbf{符号 / 缩略词} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\multicolumn{2}{c}{\tablename\ -- 续表} \\
+\toprule
+\textbf{符号 / 缩略词} & \textbf{说明} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+
+MGCA & Multi-Granularity Group Cross-Adversarial，多粒度群组交叉对抗学习框架 \\
+GCA & Group Cross-Adversarial，群组交叉对抗机制 \\
+GCA-KDJ & 群组交叉对抗框架（用于投资组合管理） \\
+RT & Racetrack / Race Track，赛马场竞争机制 \\
+S2T & Student-to-Teacher，双向师生蒸馏机制 \\
+RT-Wave & 基于反向知识蒸馏的波浪分类预测模型 \\
+Twins-VWAP / TAM & 基于孪生对抗机制的VWAP智能执行框架 \\
+Twin Detection & 孪生对抗检测机制 \\
+GAN & Generative Adversarial Network，生成对抗网络 \\
+VAE & Variational Autoencoder，变分自编码器 \\
+WGAN & Wasserstein GAN，Wasserstein生成对抗网络 \\
+TimeGAN & 时间序列生成对抗网络 \\
+QuantGAN & 量化金融生成对抗网络 \\
+D2GAN & Dual Discriminator GAN，双判别器生成对抗网络 \\
+RNN & Recurrent Neural Network，循环神经网络 \\
+LSTM & Long Short-Term Memory，长短期记忆网络 \\
+GRU & Gated Recurrent Unit，门控循环单元 \\
+Transformer & 基于自注意力机制的序列建模架构 \\
+CNN & Convolutional Neural Network，卷积神经网络 \\
+MLP & Multi-Layer Perceptron，多层感知机 \\
+GNN & Graph Neural Network，图神经网络 \\
+AAE & Adversarial Autoencoder，对抗自编码器 \\
+BiGAN & Bidirectional GAN，双向生成对抗网络 \\
+ALI & Adversarially Learned Inference，对抗学习推断 \\
+GraphVAE & 基于图结构的变分自编码器 \\
+GraphGAN & 基于图结构的生成对抗网络 \\
+DeepLOB & 基于深度学习的限价订单簿建模方法 \\
+DML & Deep Mutual Learning，深度互学习 \\
+SVM & Support Vector Machine，支持向量机 \\
+GBDT & Gradient Boosting Decision Tree，梯度提升决策树 \\
+PCA & Principal Component Analysis，主成分分析 \\
+ERM & Empirical Risk Minimization，经验风险最小化 \\
+DRO & Distributionally Robust Optimization，分布鲁棒优化 \\
+MARL & Multi-Agent Reinforcement Learning，多智能体强化学习 \\
+FinBERT & 金融领域预训练语言模型 \\
+\end{longtable}
+
+%% ============================================================
+\section*{二、数学符号与变量}
+%% ============================================================
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{4cm} p{10cm}}
+\toprule
+\textbf{符号} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\multicolumn{2}{c}{\tablename\ -- 续表} \\
+\toprule
+\textbf{符号} & \textbf{说明} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+
+$X$ & 输入特征序列，$X \in \mathbb{R}^{B \times T \times D_{\text{total}}}$ \\
+$\hat{X}$, $\hat{X}_m$ & 重构/生成的特征序列 \\
+$B$ & 批量大小（Batch Size） \\
+$T$ & 时间步长度 \\
+$D_{\text{total}}$ & 输入特征总维度 \\
+$d_{\text{model}}$ & 模型潜在表示维度 \\
+$M$ & 特征组数量 / 生成器数量 \\
+$N$ & 判别器数量 / 时间步总数 \\
+$G$, $G_m$ & 生成器（第$m$个生成器） \\
+$D$, $D_n$ & 判别器（第$n$个判别器） \\
+$G^{\star}$ & 全局最优生成器 \\
+$G^{\dagger}$ & 全局最差生成器 \\
+$G_{\text{new}}$ & 赛马场机制中新引入的生成器 \\
+$D^{\star}$ & 全局最优判别器 \\
+$D^{\dagger}$ & 全局最差判别器 \\
+$D^{(t)}$ & 组内最优判别器（教师） \\
+$E_{\phi}$ & VAE编码器（参数为$\phi$） \\
+$\text{Dec}_{\psi}$ & VAE解码器（参数为$\psi$） \\
+$z$ & 潜变量 \\
+$\mu$, $\log \sigma^2$ & 潜变量分布的均值与对数方差 \\
+$\epsilon$ & 重参数化噪声，$\epsilon \sim \mathcal{N}(0,I)$；或偏离阈值 \\
+$h_{G_m}$ & 第$m$个特征组的潜在表示 \\
+$h_{\text{combined}}$ & 简单融合后的组合潜在表示 \\
+$h_{\text{fused}}$ & 融合后的联合潜在表示 \\
+$\mathbf{w}$, $\mathbf{w}_m$ & 门控融合中的动态权重向量 \\
+$p_t$ & 生成器在任务$t$上的logits输出向量 \\
+$y_t$ & 任务$t$的真实结构标签 \\
+$\hat{L}_t$, $L_t$ & 趋势持续时间的预测值与真实值 \\
+$K_t$ & 任务$t$的类别数 \\
+$z_{\text{real}}$, $z_{\text{fake}}$ & 判别器对真实/生成样本的logits输出 \\
+$f_{\text{real}}$, $f_{\text{fake}}$ & 判别器对真实/生成样本的中间层特征 \\
+$p_{\text{real}}$, $p_{\text{fake}}$ & 判别器对真实/生成样本的概率输出 \\
+$\sigma(\cdot)$ & Sigmoid激活函数 \\
+$\tau$ & 知识蒸馏中的温度系数 \\
+$\lambda_{\text{rec}}$, $\lambda_{\text{adv}}$, $\lambda_{\text{distill}}$, $\lambda_D$ & 各损失项的权重系数 \\
+$\beta$ & VAE中KL散度项的权重 \\
+$\boldsymbol{w}_{G_{\text{new}}}$ & 新生成器的参数 \\
+$S^*$ & 混合数据集（真实数据与生成数据的组合） \\
+$y^*$ & 混合数据集中的标签 \\
+$\Delta_i^{(t)}$ & 第$i$个生成器/判别器在时间步$t$的偏离度 \\
+$N_i$ & 偏离超过阈值的累计次数 \\
+$\varphi$ & 黄金比例常数，$\varphi = 1.618$ \\
+$W^{(k)}$ & 第$k$级别的波浪集合 \\
+$w_i^{(k)}$ & 第$k$级别的第$i$个波段 \\
+$P(w_i)$ & 波段$w_i$的端点价格 \\
+$P_t$ & 时刻$t$的价格 \\
+$V_t$ & 时刻$t$的成交量 \\
+$q_t$ & 策略在时间步$t$的执行量 \\
+$Q_{\text{total}}$ & 总交易量 \\
+$R_t$ & 时间步$t$的剩余订单量 \\
+$r$ & 收盘兜底阶段的几何级数衰减比率 \\
+$\hat{\mathbf{v}}$ & 预测的成交量密度向量 \\
+$v_t$ & 时间步$t$的成交量占比 \\
+$\mathbf{f}_i$, $\mathbf{f}^*$ & 当前/最优判别器倒数第二层特征表示 \\
+$\mathbf{z}_i$, $\mathbf{z}^*$ & 当前/最优判别器的输出Logits \\
+\end{longtable}
+
+%% ============================================================
+\section*{三、损失函数与优化目标}
+%% ============================================================
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{4cm} p{10cm}}
+\toprule
+\textbf{符号} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\multicolumn{2}{c}{\tablename\ -- 续表} \\
+\toprule
+\textbf{符号} & \textbf{说明} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+
+$\mathcal{L}_{\text{VAE}}$ & VAE训练总损失（重构误差 + KL正则项） \\
+$\mathcal{L}_{\text{rec}}^{\text{VAE}}$ & VAE重构损失 \\
+$\mathcal{L}_{\text{KL}}$ & KL散度正则化损失，$D_{\mathrm{KL}}(q_\phi(z|X) \| p(z))$ \\
+$\mathcal{L}_{G_m}$ & 第$m$个生成器的联合损失 \\
+$\mathcal{L}_{\text{rec}}^{(m)}$ & 第$m$个生成器的重构损失 \\
+$\mathcal{L}_{\text{adv}}^{(m)}$ & 第$m$个生成器的对抗损失 \\
+$\mathcal{L}_{D_n}$ & 第$n$个判别器的损失 \\
+$L_{\text{supervised}}$ & 多任务监督损失（Focal Loss + 长度MSE） \\
+$L_{\text{adv}}$ & 对抗损失 \\
+$L_{\text{T2S}}$ & 正向知识蒸馏损失（Teacher-to-Student） \\
+$L_{\text{RT-Wave}}$ & 反向知识蒸馏损失（Student-to-Teacher） \\
+$L_G$ & 生成器总损失 \\
+$L_{\text{bce}}$ & 二元交叉熵损失（Binary Cross-Entropy） \\
+$L_{\text{feat}}$ & 特征蒸馏损失 \\
+$L_{\text{logit}}$ & Logits蒸馏损失 \\
+$L_{\text{prob}}$ & 概率蒸馏损失 \\
+$L_D$ & 判别器总损失 \\
+$\mathcal{L}_{\text{slippage}}$ & 滑点损失 \\
+$\mathcal{L}_{G}^{\text{recon}}$ & 生成器金融感知重构损失 \\
+$\mathcal{L}_{D}^{\text{CE}}$ & 判别器交叉熵分类损失 \\
+$\mathcal{L}_{\text{Distill}}$ & 知识蒸馏损失 \\
+$\mathcal{L}_{\text{Student}}$ & 赛马场学生蒸馏损失 \\
+MSE & Mean Squared Error，均方误差 \\
+RMSE & Root Mean Squared Error，均方根误差 \\
+MAE & Mean Absolute Error，平均绝对误差 \\
+MAPE & Mean Absolute Percentage Error，平均绝对百分比误差 \\
+Focal Loss & 聚焦损失，用于缓解类别不平衡问题 \\
+BCE & Binary Cross-Entropy，二元交叉熵损失 \\
+CE & Cross-Entropy，交叉熵损失 \\
+Huber Loss & Huber损失，平滑的L1损失 \\
+LogCosh Loss & 对数双曲余弦损失 \\
+KL Divergence & Kullback-Leibler散度 \\
+ELBO & Evidence Lower Bound，证据下界 \\
+\end{longtable}
+
+%% ============================================================
+\section*{四、技术指标与金融术语}
+%% ============================================================
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{4cm} p{10cm}}
+\toprule
+\textbf{符号 / 缩略词} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\multicolumn{2}{c}{\tablename\ -- 续表} \\
+\toprule
+\textbf{符号 / 缩略词} & \textbf{说明} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+
+OHLCV & Open, High, Low, Close, Volume，开盘价、最高价、最低价、收盘价、成交量 \\
+OHLC & Open, High, Low, Close，开盘价、最高价、最低价、收盘价 \\
+MA & Moving Average，移动平均线 \\
+EMA & Exponential Moving Average，指数移动平均线 \\
+MACD & Moving Average Convergence Divergence，指数平滑异同移动平均线 \\
+DIF & MACD中快慢均线之差（动量线） \\
+DEA & DIF的指数移动平均（信号线） \\
+RSI & Relative Strength Index，相对强弱指数 \\
+KDJ & 随机指标（Stochastic Oscillator） \\
+ATR & Average True Range，真实波幅 \\
+Bollinger Bands & 布林带 \\
+VWAP & Volume Weighted Average Price，成交量加权平均价格 \\
+TWAP & Time Weighted Average Price，时间加权平均价格 \\
+LOB & Limit Order Book，限价订单簿 \\
+QR & Quantitative Relative Strength，量化相对强度指标 \\
+5EMA / 120EMA & 5日/120日指数移动平均线 \\
+\end{longtable}
+
+%% ============================================================
+\section*{五、评估指标与绩效度量}
+%% ============================================================
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{4cm} p{10cm}}
+\toprule
+\textbf{符号 / 缩略词} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\multicolumn{2}{c}{\tablename\ -- 续表} \\
+\toprule
+\textbf{符号 / 缩略词} & \textbf{说明} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+
+Sharpe Ratio & 夏普比率，衡量单位风险下的超额收益 \\
+Calmar Ratio & 卡玛比率，年化收益率除以最大回撤 \\
+Sortino Ratio & 索提诺比率，仅考虑下行风险的风险调整收益指标 \\
+AnnRet & Annualized Return，年化收益率 \\
+MDD / Max Drawdown & Maximum Drawdown，最大回撤 \\
+Total Return & 总收益率 \\
+Annualized Volatility & 年化波动率 \\
+Win Rate & 胜率，盈利交易占总交易的比例 \\
+Profit Factor & 盈利因子 \\
+Average Turnover & 平均换手率 \\
+Accuracy & 准确率 \\
+Precision & 精确率 \\
+Recall & 召回率 \\
+F1 Score & F1值（精确率与召回率的调和平均） \\
+AUC & Area Under Curve，ROC曲线下面积 \\
+$R^2$ & 决定系数 \\
+Direction Accuracy & 方向准确率 \\
+Slippage & 滑点，实际执行价格与预期价格之差 \\
+Cost Saving & 成本节省 \\
+PBO & Probability of Backtest Overfitting，回测过拟合概率 \\
+\end{longtable}
+
+%% ============================================================
+\section*{六、自定义名词与专用术语}
+%% ============================================================
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{4.5cm} p{9.5cm}}
+\toprule
+\textbf{术语} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\multicolumn{2}{c}{\tablename\ -- 续表} \\
+\toprule
+\textbf{术语} & \textbf{说明} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+
+预测-决策不对齐问题 & Prediction-Decision Misalignment，预测模型目标函数与实际交易决策目标之间的内在错位 \\
+赛马场机制 & Racetrack Mechanism，通过并行训练多个异构生成器并引入优胜劣汰竞争机制实现模型自我进化 \\
+孪生对抗机制 & Twins Adversarial Mechanism，构建成对且功能对等的生成—判别子系统进行交叉校验 \\
+偏序对抗 & Partial Order Adversarial，按GCA$\to$RT$\to$S2T$\to$Twin严格偏序执行的四阶段对抗训练流程 \\
+反向知识蒸馏 & Reverse Distillation / Student-to-Teacher，弱模型对强模型施加结构约束，防止模式坍缩 \\
+正向知识蒸馏 & Teacher-to-Student Distillation，强模型（教师）将知识传递给弱模型（学生） \\
+三重蒸馏 & 同时对特征、Logits和概率输出进行蒸馏对齐 \\
+组内蒸馏 & Intra-Group Distillation，同一组内最优模型向落后模型传递知识 \\
+组间交叉对抗 & Inter-Group Cross-Adversarial，不同组的代表之间进行全局竞争 \\
+全局蒸馏 & Global Distillation，跨组的知识传递与统一对齐 \\
+动态归纳偏置对齐 & Dynamic Inductive Bias Alignment，根据市场状态动态选择最优模型架构 \\
+隐式正则化 & Implicit Regularization，通过赛马场机制在模型选择维度上防止过拟合 \\
+不对称竞争优势 & Asymmetric Competitive Advantage，MGCA框架在极端市场中获取超额收益的非对称能力 \\
+收益凸性 & Convexity，在常规市场保持基准表现、极端市场获取超额收益的非线性特征 \\
+逆境反转 & Turnaround，基准模型亏损而MGCA实现盈利的场景 \\
+模式崩溃 / 模式坍缩 & Mode Collapse，GAN训练中生成器收敛到狭窄输出空间的现象 \\
+体制转换 & Regime Shifts，金融市场动力学特征发生根本性变化 \\
+分歧即风控 & 多个生成器预测分歧时自动降低仓位暴露的隐式风控机制 \\
+CDVA 分形标签体系 & 基于C（上穿）、D（下穿）、V（向上突破）、A（向下跌破）四类分形事件的可量化波浪结构标注体系 \\
+C（Crossover-Up） & 上穿事件，DIF由下向上穿越DEA \\
+D（Crossover-Down） & 下穿事件，DIF由上向下穿越DEA \\
+V（Vertex-Up） & 向上突破事件，收盘价突破前一周期实体上沿 \\
+A（Adjacent-Down） & 向下跌破事件，收盘价跌破前一周期实体下沿 \\
+带鱼 / Long Fish & 趋势有效的波段结构，信号触发后价格朝有利方向演化 \\
+短鱼 / Short Fish & 趋势失败的波段结构，信号触发后价格未能持续 \\
+交集对齐策略 & Intersection Alignment Strategy，多品种数据的时间对齐方法 \\
+金融感知重构损失 & Financial Aware Loss，对价格维度与成交量维度分别加权的重构损失 \\
+双头输出机制 & Dual-Head Output Mechanism，判别器同时输出分类头和特征头 \\
+分类头 & Classification Head，输出涨/跌/平三分类概率的分支 \\
+特征头 & Feature Head，输出倒数第二层特征向量用于蒸馏的分支 \\
+\end{longtable}
+
+%% ============================================================
+\section*{七、数据处理与实验术语}
+%% ============================================================
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{4.5cm} p{9.5cm}}
+\toprule
+\textbf{术语 / 符号} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\multicolumn{2}{c}{\tablename\ -- 续表} \\
+\toprule
+\textbf{术语 / 符号} & \textbf{说明} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+
+Min-Max Normalization & 区间缩放标准化，将特征值映射至$[0,1]$区间 \\
+Z-score Standardization & Z-score标准化，将特征变换为零均值单位方差 \\
+Sliding Window & 滑动窗口，用于时间序列数据的分段方法 \\
+Embargo Period & 隔离期，训练集与测试集之间的时间间隔，防止数据泄露 \\
+Purging & 数据清洗，去除训练集与测试集之间有标签重叠的样本 \\
+Backtrader & Python回测框架 \\
+Backtesting & 基于历史数据的策略回测评估 \\
+Segment & 数据切分后的独立时间段 \\
+Epoch & 训练轮次 \\
+Batch Size & 批量大小 \\
+Learning Rate & 学习率 \\
+Dropout & 随机失活正则化技术 \\
+Gradient Clipping & 梯度裁剪 \\
+Early Stopping & 早停策略 \\
+Adam & 自适应矩估计优化器 \\
+Xavier Initialization & Xavier均匀分布参数初始化方法 \\
+Seq2Seq & Sequence-to-Sequence，序列到序列模型 \\
+MHA & Multi-Head Attention，多头注意力机制 \\
+Softmax & 归一化指数函数 \\
+DeepCopy & 深拷贝，用于模型参数的完整复制 \\
+fake\_ratio & 虚拟数据在混合数据集中的占比 \\
+\end{longtable}
+
+%% ============================================================
+\section*{八、金融市场与交易术语}
+%% ============================================================
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{4.5cm} p{9.5cm}}
+\toprule
+\textbf{术语} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\multicolumn{2}{c}{\tablename\ -- 续表} \\
+\toprule
+\textbf{术语} & \textbf{说明} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+
+Alpha & 超额收益，策略相对于基准的额外回报 \\
+EMH & Efficient Market Hypothesis，有效市场假说 \\
+AC模型 & Almgren-Chriss最优执行模型 \\
+HJB方程 & Hamilton-Jacobi-Bellman方程 \\
+CARA & Constant Absolute Risk Aversion，恒定绝对风险厌恶效用函数 \\
+永久性冲击 & Permanent Impact，交易对价格的长期影响 \\
+暂时性冲击 & Temporary Impact，因消耗短期流动性导致的价格偏离 \\
+市场冲击 & Market Impact，大额订单对市场价格的影响 \\
+流动性 & Liquidity，资产在不影响价格的情况下被买卖的能力 \\
+做多 / 做空 & Long / Short，买入/卖出持仓方向 \\
+仓位 & Position，持有的头寸 \\
+头寸 & 交易中持有的合约数量和方向 \\
+合约乘数 & Contract Multiplier，期货合约的交易单位 \\
+保证金比例 & Margin Ratio，开仓所需的保证金占合约价值的比例 \\
+TotalEquity & 账户总权益 \\
+动量效应 & Momentum Effect，价格趋势在短期内延续的现象 \\
+均值回归 & Mean-Reverting，价格回归历史均值的倾向 \\
+非平稳性 & Non-stationarity，统计特征随时间变化的性质 \\
+厚尾分布 & Fat-tailed Distribution，极端事件概率高于正态分布 \\
+偏度 & Skewness，分布的不对称性度量 \\
+峰度 & Kurtosis，分布尾部厚度的度量 \\
+分形 & Fractal，不同尺度上呈现自相似结构的几何特征 \\
+Elliott波浪理论 & 艾略特波浪理论，基于市场参与者心理预期的结构分析方法 \\
+斐波那契比例 & Fibonacci Ratio，波浪理论中的价格比例关系 \\
+推动浪 & Impulse Wave，Elliott波浪理论中的五浪推进结构 \\
+调整浪 & Corrective Wave，Elliott波浪理论中的ABC三浪回调结构 \\
+\end{longtable}
+
+%% ============================================================
+\section*{九、期货品种与分组}
+%% ============================================================
+
+\begin{longtable}{>{\raggedright\arraybackslash}p{4.5cm} p{9.5cm}}
+\toprule
+\textbf{品种 / 分组} & \textbf{说明} \\
+\midrule
+\endfirsthead
+\multicolumn{2}{c}{\tablename\ -- 续表} \\
+\toprule
+\textbf{品种 / 分组} & \textbf{说明} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+
+\textbf{农业板块（agriculture）} & 玉米（Corn）、豆粕（Soybean Meal）、棉花（Cotton）、白糖（Sugar） \\
+\textbf{能源板块（energy）} & 原油（Crude Oil）、动力煤（Thermal Coal）、甲醇（Methanol） \\
+\textbf{金属板块（metals）} & 铜（Copper）、黄金（Gold）、铁矿石（Iron Ore）、焦炭（Coke）、热卷（Hot Rolled Coil）、螺纹钢（Rebar） \\
+\textbf{化工板块（chemicals）} & PTA、PP、PVC \\
+\textbf{贵金属（precious）} & 黄金（Gold） \\
+\textbf{贱金属（base\_metals）} & 铜、铁矿石、焦炭、热卷、螺纹钢 \\
+\textbf{小组合（small\_group）} & 铜、黄金、原油 \\
+\textbf{大组合（large\_group）} & 铜、黄金、原油、玉米、豆粕、棉花 \\
+\textbf{全品种（all\_group）} & 全部16种期货品种 \\
+\addlinespace
+\multicolumn{2}{l}{\textit{第六章VWAP实验额外涉及的品种：}} \\
+白银（ag9999） & 贵金属 \\
+镍（ni9999） & 有色金属 \\
+沪深300股指（IF9999） & 金融期货 \\
+上证50股指（IH9999） & 金融期货 \\
+10年期国债（T9999） & 金融期货 \\
+豆油（y9999） & 农产品 \\
+苹果（AP9999） & 农产品 \\
+液化石油气（pg9999） & 能源化工 \\
+菜籽油（OI9999） & 能源化工 \\
+尿素（UR9999） & 能源化工 \\
+\addlinespace
+\multicolumn{2}{l}{\textit{第七章偏序对抗实验额外涉及的品种：}} \\
+铝（al9999） & 有色金属 \\
+锌（zn9999） & 有色金属 \\
+橡胶 & 化工品 \\
+棕榈油 & 农产品 \\
+一号大豆 & 农产品 \\
+\end{longtable}

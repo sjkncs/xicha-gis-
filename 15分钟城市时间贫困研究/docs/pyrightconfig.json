@@ -1,0 +1,12 @@
+{
+  "include": ["."],
+  "exclude": [
+    "*.ipynb",
+    "village_data/**",
+    "data/**",
+    "**/__pycache__/**",
+    "**/.ipynb_checkpoints/**"
+  ],
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "standard"
+}
