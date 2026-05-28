@@ -33,9 +33,16 @@ from matplotlib.colors import LinearSegmentedColormap
 import warnings, os
 warnings.filterwarnings('ignore')
 
-BASE = r"e:\xicha gis 智能定位\15分钟城市时间贫困研究"
+BASE = r"e:\xicha gis 智能定位\projects\15min-urban-accessibility"
 OUT_DIR = os.path.join(BASE, "conference_paper", "figures")
+
+# SCI output: overleaf paper figures directory
+SCI_OUT_DIR = os.path.join(
+    r"e:\xicha gis 智能定位\papers\conference-slides\会议论文\15min可达性幻觉\overleaf_paper",
+    "figures"
+)
 os.makedirs(OUT_DIR, exist_ok=True)
+os.makedirs(SCI_OUT_DIR, exist_ok=True)
 
 # ── IEEE Conference 学术配色 ──────────────────────────────────────
 IEEE_COLORS = {
@@ -57,9 +64,23 @@ IEEE_COLORS = {
 }
 
 # ── 字体设置 ──────────────────────────────────────────────────
-FONT_CJK = ['Source Han Sans SC', 'Noto Sans CJK SC', 'WenQuanYi Micro Hei',
-            'Microsoft YaHei', 'PingFang SC', 'SimHei']
-plt.rcParams['font.family'] = FONT_CJK + ['DejaVu Sans', 'Helvetica', 'Arial']
+# 优先使用系统已安装的 CJK 字体，确保中文字符正确渲染到 PNG
+FONT_CJK = ['Noto Sans SC', 'SimHei', 'Microsoft YaHei',
+            'Source Han Sans SC', 'WenQuanYi Micro Hei', 'PingFang SC']
+FONT_FALLBACK = ['DejaVu Sans', 'Helvetica', 'Arial']
+available_cjk = []
+for f in FONT_CJK:
+    try:
+        from matplotlib.font_manager import fontManager
+        match = [fp for fp in fontManager.ttflist if f.lower() in fp.name.lower()]
+        if match:
+            available_cjk.append(match[0].name)
+            break
+    except Exception:
+        pass
+if not available_cjk:
+    available_cjk = ['Noto Sans SC']
+plt.rcParams['font.family'] = available_cjk + FONT_FALLBACK
 plt.rcParams['axes.unicode_minus'] = False
 plt.rcParams['font.size'] = 10
 plt.rcParams['axes.titlesize'] = 11
@@ -68,6 +89,7 @@ plt.rcParams['xtick.labelsize'] = 9
 plt.rcParams['ytick.labelsize'] = 9
 plt.rcParams['legend.fontsize'] = 9
 plt.rcParams['figure.dpi'] = 300
+print(f"  [FONT] CJK font in use: {available_cjk}")
 
 def setup_ax(ax, title='', xlabel='', ylabel='', grid=True):
     ax.set_facecolor(IEEE_COLORS['panel'])
@@ -81,11 +103,22 @@ def setup_ax(ax, title='', xlabel='', ylabel='', grid=True):
         spine.set_edgecolor(IEEE_COLORS['grid'])
     return ax
 
-def save_fig(fig, name):
-    path = os.path.join(OUT_DIR, name)
-    fig.savefig(path, dpi=300, bbox_inches='tight', facecolor=IEEE_COLORS['bg'])
+def save_fig(fig, name, out_dir=None):
+    target_dir = out_dir or OUT_DIR
+    path = os.path.join(target_dir, name)
+    fig.savefig(path, dpi=300, bbox_inches='tight',
+                facecolor=IEEE_COLORS['bg'], pad_inches=0.05)
     plt.close(fig)
     print(f"  [SAVE] {name}  ->  {path}")
+
+
+def save_sci_fig(fig, name):
+    """Save figure to the SCI overleaf output directory."""
+    path = os.path.join(SCI_OUT_DIR, name)
+    fig.savefig(path, dpi=300, bbox_inches='tight',
+                facecolor=IEEE_COLORS['bg'], pad_inches=0.05)
+    plt.close(fig)
+    print(f"  [SAVE-SCI] {name}  ->  {path}")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -175,6 +208,89 @@ def fig1_framework():
 
     plt.tight_layout()
     save_fig(fig, 'fig1_framework.png')
+
+
+def fig1_framework_sci():
+    """FIG 1 SCI version: English-only labels, saves to SCI output directory."""
+    fig, ax = plt.subplots(figsize=(14, 7), dpi=300)
+    ax.set_facecolor(IEEE_COLORS['bg'])
+    ax.set_xlim(0, 14); ax.set_ylim(0, 7); ax.axis('off')
+
+    def draw_box_en(ax, x, y, w, h, color, title, items):
+        rect = mpatches.FancyBboxPatch((x, y), w, h,
+                                        boxstyle='round,pad=0.1',
+                                        facecolor=color + '18',
+                                        edgecolor=color, lw=2.5, alpha=0.92)
+        ax.add_patch(rect)
+        ax.text(x + w / 2, y + h - 0.22, title,
+                ha='center', va='top', color=color,
+                fontsize=11, fontweight='bold')
+        for i, item in enumerate(items):
+            ax.text(x + 0.18, y + h - 0.65 - i * 0.42, item,
+                    ha='left', va='top', color=IEEE_COLORS['text'],
+                    fontsize=8.5)
+
+    # Row 1: Data (left) + Amap (right)
+    draw_box_en(ax, 0.5, 4.8, 4.2, 1.8, IEEE_COLORS['primary'],
+                'Data Layer',
+                ['Road network: 4,218 nodes | 6,847 edges',
+                 'POI records: 69,424',
+                 'Communities: 400 residential',
+                 'Population: 1.844M (2025)'])
+
+    draw_box_en(ax, 9.3, 4.8, 4.2, 1.8, IEEE_COLORS['purple'],
+                'Amap Building Data (Supplementary)',
+                ['Building records: 1,166 valid',
+                 'Usage types: 9 categories',
+                 'Floor count: 0-78 floors',
+                 'Building density → pedestrian blocking'])
+
+    # Row 2: Method (left) + Night Analysis (right)
+    draw_box_en(ax, 0.5, 2.5, 4.2, 1.8, IEEE_COLORS['secondary'],
+                'Method Layer',
+                ['Dijkstra shortest path algorithm',
+                 'M2SFCA accessibility index',
+                 'Euclidean vs network distance',
+                 'Walking speed: 1.2 m/s'])
+
+    draw_box_en(ax, 9.3, 2.5, 4.2, 1.8, IEEE_COLORS['teal'],
+                'Night Service Availability (Supplementary)',
+                ['Nighttime POI inference',
+                 'Day vs nighttime accessibility',
+                 'TPI time poverty index',
+                 'High-end communities: largest gap'])
+
+    # Row 3: Results (left) + Key Findings (right)
+    draw_box_en(ax, 0.5, 0.3, 4.2, 1.8, IEEE_COLORS['quaternary'],
+                'Accessibility Illusion Index (AI)',
+                ['Euclidean vs actual walking gap',
+                 'AI = (T_network - T_promised) / T_promised',
+                 'Network ratio = D_network / D_euclidean',
+                 'Threshold: 15-minute walking circle'])
+
+    draw_box_en(ax, 9.3, 0.3, 4.2, 1.8, IEEE_COLORS['tertiary'],
+                'Key Findings',
+                ['Avg extra travel time: 42%',
+                 '85% communities affected by illusion',
+                 'Urban village ratio: 1.28 (lowest)',
+                 'Affordable housing AI: 52.3% (highest)'])
+
+    def arrow(ax, x1, y1, x2, y2, color, lw=2):
+        ax.annotate('', xy=(x2, y2), xytext=(x1, y1),
+                   arrowprops=dict(arrowstyle='->', color=color, lw=lw))
+
+    arrow(ax, 2.6, 4.8, 2.6, 4.3, IEEE_COLORS['primary'])
+    arrow(ax, 4.7, 3.8, 9.3, 5.7, IEEE_COLORS['purple'], lw=1.5)
+    arrow(ax, 2.6, 2.5, 2.6, 2.1, IEEE_COLORS['secondary'])
+    arrow(ax, 4.7, 2.5, 9.3, 3.3, IEEE_COLORS['teal'], lw=1.5)
+    arrow(ax, 2.6, 1.0, 9.3, 1.0, IEEE_COLORS['quaternary'], lw=1.5)
+
+    ax.text(7, 6.65, 'Fig. 1. Conceptual Framework of Accessibility Illusion Analysis',
+            ha='center', va='top', color=IEEE_COLORS['text'],
+            fontsize=12, fontweight='bold')
+
+    plt.tight_layout()
+    save_sci_fig(fig, 'fig1_framework_sci.png')
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -902,8 +1018,10 @@ def main():
     print("Conference Paper Figures Generator")
     print("15分钟城市可达性幻觉研究 — 会议论文图表生成")
     print(f"Output: {OUT_DIR}")
+    print(f"SCI Output: {SCI_OUT_DIR}")
     print("=" * 70)
 
+    # CN version figures
     fig1_framework()
     fig2_euclidean_vs_network()
     fig3_study_area()
@@ -915,12 +1033,23 @@ def main():
     fig9_supply_demand()
     fig10_street_view_synthesis()
 
+    # SCI version figures (English-only, saves to overleaf_paper/figures)
+    fig1_framework_sci()
+
     print(f"\n{'=' * 70}")
-    print(f"Done! All figures saved to: {OUT_DIR}")
-    files = sorted(os.listdir(OUT_DIR))
-    for f in files:
+    print(f"Done! All figures saved.")
+    print(f"CN figures: {OUT_DIR}")
+    files_cn = sorted(os.listdir(OUT_DIR))
+    for f in files_cn:
         print(f"  - {f}")
-    print(f"Total: {len(files)} files")
+    print(f"SCI figures: {SCI_OUT_DIR}")
+    try:
+        files_sci = sorted(os.listdir(SCI_OUT_DIR))
+        for f in files_sci:
+            print(f"  - {f}")
+    except Exception:
+        print("  (none generated yet)")
+    print(f"Total CN: {len(files_cn)} files")
 
 
 if __name__ == '__main__':
