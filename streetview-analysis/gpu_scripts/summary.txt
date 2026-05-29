@@ -1,0 +1,11 @@
+Total locations: 74
+Total images: 294
+Total pixels: 4816896
+
+  building: 70.44%
+  road: 13.22%
+  green: 1.40%
+  sky: 0.03%
+  person: 0.13%
+  car: 10.98%
+  other: 3.80%

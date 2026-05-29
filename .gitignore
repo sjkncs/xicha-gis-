@@ -50,3 +50,11 @@ papers/overleaf/*/synctex.gz
 osm_cache/
 overpass_cache/
 *.overpass.cache
+
+# 临时文件
+temp_paths*.txt
+
+# 大型二进制文件（本地保留，不上传）
+yolo11x_local.pt
+streetview-analysis/gpu_scripts/segformer_b3_ade/pytorch_model.bin
+streetview-analysis/city_twin_output/city_twin_viewer.html
