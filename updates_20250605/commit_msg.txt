@@ -1,0 +1,11 @@
+feat: add streetview analysis pipeline, VLM appendix and simulation figures
+
+- streetview-analysis/: Complete GPU inference pipeline for street view
+  obstacle detection using VLM, includes batch segmentation scripts,
+  city twin builder, trajectory analysis, YOLO results, annotated images
+- appendix-vlm/: VLM-annotated appendix street view images by district
+  (光明区/南山区/宝安区/龙岗区/Village) with obstacle categorization
+- figures-vlm/: Simulation comparison figures (original vs VLM-perceived)
+  showing hallucination patterns across obstacle density levels
+- Updated .gitattributes for OTF/DOC/DOCX/PPTX LFS tracking
+- Updated .gitignore to exclude yolo11x_local.pt model weight
