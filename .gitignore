@@ -55,13 +55,16 @@ overpass_cache/
 temp_paths*.txt
 
 # 大型二进制文件（本地保留，不上传）
-yolo11x_local.pt
-streetview-analysis/gpu_scripts/segformer_b3_ade/pytorch_model.bin
 streetview-analysis/city_twin_output/city_twin_viewer.html
 
 # RAR 压缩包（太大，不上传）
 *.rar
 
+# PowerShell 脚本（不上传）
+*.ps1
+
 # 临时缓存和杂项
 cache/
 commit_msg.txt
+.winsess
+.pipeline_cache/
