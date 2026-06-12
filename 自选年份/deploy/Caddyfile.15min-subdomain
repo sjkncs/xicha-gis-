@@ -1,0 +1,21 @@
+# Isolated Caddy site for 15min.globalreviewops.xyz.
+# Append this block to C:\globalreviewops\Caddyfile only after DNS points
+# 15min.globalreviewops.xyz to the server. It does not modify the parent
+# globalreviewops.xyz site block.
+
+15min.globalreviewops.xyz {
+	encode gzip
+
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:8765
+	}
+
+	root * C:/www/15min/static
+	try_files {path} /city_twin_viewer.html
+	file_server
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}

@@ -1,0 +1,111 @@
+\documentclass{article}
+\usepackage[UTF8]{ctex}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.5cm}
+\begin{document}
+
+\title{基于深度学习的城市无障碍可达性分析}
+\subtitle{以深圳市南山区为例}
+\date{\today}
+\maketitle
+
+\section{研究数据与实验方法}
+
+本研究以深圳市南山区为核心研究区，共采集街景图像294张，其中南山区136张。图像采集自腾讯/百度街景API，拍摄时间为2022年。采样密度约为每500米一个采样点，每点采集东、西、南、北四个方向。\ Parra
+
+本研究采用YOLO11x目标检测模型~\cite{yolo11}，基于COCO-80类别数据集进行预训练。针对无障碍分析需求，重点关注车辆占道、行人、非机动车等影响通行的目标。检测置信度阈值设为0.35。\ Parra
+
+障碍评分公式如式(ef{eq:obs})所示：
+\begin{equation}
+S_{\text{obs}} = \sum_{i} (c_i \cdot w_i \cdot z_i) \times 100
+\end{equation}
+
+其中 $c_i$ 为第 $i$ 个检测目标的置信度，$w_i$ 为类别权重（汽车1.2、货车1.0、摩托车0.8、自行车0.5、行人0.3），$z_i$ 为空间区域权重（通行区0.5、中部0.35、顶部0.15）。\ Parra
+
+\section{分析结果}
+
+南山区136张街景图像的平均障碍评分为20.9分，中位数16.5分，标准差18.3分，评分范围[$0.0, 75.5$]。\ Parra
+
+共检测到599次障碍物，类别分布见表\ref{tab:cat}。
+\begin{table}[h]
+\centering
+\caption{障碍类别统计}\label{tab:cat}
+\begin{tabular}{lcc}
+\toprule
+障碍类别 & 检测次数 & 占比 \\ \midrule
+汽车占道 & 373 & 62.3\% \\
+行人/使用者 & 79 & 13.2\% \\
+摩托车/电动车 & 72 & 12.0\% \\
+货车占道 & 38 & 6.3\% \\
+自行车占道 & 20 & 3.3\% \\
+公交车占道 & 14 & 2.3\% \\
+停车标志 & 2 & 0.3\% \\
+长椅占道 & 1 & 0.2\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+其中汽车占道占道比例最高，达62.3\%，反映出南山区停车供需矛盾突出的结构性问题。\ Parra
+
+街道级障碍评分统计见表\ref{tab:street}。
+\begin{table}[h]
+\centering
+\caption{南山区各街道障碍评分统计}\label{tab:street}
+\begin{tabular}{lcccccc}
+\toprule
+街道 & 样本数 & 均值 & 中位数 & 最高分 & 标准差 & 评级 \\ \midrule
+招商 & 20 & 34.0 & 32.1 & 75.5 & 22.2 & 一般 \\
+西丽 & 12 & 24.6 & 25.0 & 57.2 & 21.4 & 一般 \\
+粤海 & 28 & 22.2 & 16.9 & 62.0 & 16.9 & 一般 \\
+南头 & 16 & 20.9 & 17.1 & 58.1 & 18.6 & 一般 \\
+蛇口 & 8 & 16.9 & 11.5 & 43.5 & 13.8 & 较畅通 \\
+南山 & 36 & 15.9 & 13.5 & 58.6 & 15.0 & 较畅通 \\
+桃源 & 8 & 14.2 & 15.2 & 29.2 & 9.6 & 较畅通 \\
+沙河 & 8 & 11.1 & 10.1 & 24.1 & 9.3 & 较畅通 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+招商街道平均障碍评分最高（34.0分），主要障碍为汽车占道和摩托车占道。沙河街道表现最佳（11.1分），可作为示范街道。\ Parra
+
+与周边行政区对比：
+\begin{tabular}{lcccc}
+\toprule
+行政区 & 样本数 & 均值 & 中位数 & 标准差 \\ \midrule
+福田区 & 48 & 14.4 & 10.2 & 14.0 \\
+龙华区 & 48 & 18.7 & 12.1 & 19.2 \\
+南山区 & 136 & 20.9 & 16.5 & 18.3 \\
+宝安区 & 58 & 28.8 & 24.4 & 20.2 \\
+其他 & 4 & 46.9 & 52.6 & 12.4 \\
+\bottomrule
+\end{tabular}
+
+\section{讨论}
+
+主要障碍因素：
+\begin{enumerate}
+\item 汽车占道占道比例最高（62.3\%），反映停车位严重不足。
+\item 摩托车/电动车占道72次，非机动车停车设施配套不完善。
+\item 街道间差异显著，招商街道（34.0分）远高于沙河街道（11.1分）。
+\end{enumerate}
+
+\section{结论}
+
+\begin{enumerate}
+\item 南山区平均障碍评分为20.9分，处于一般水平。
+\item 汽车占道占道是最主要障碍（62.3\%）。
+\item 招商街道最差（34.0分），沙河街道最佳（11.1分）。
+\item 基于YOLO目标检测的15分钟社区无障碍评分方法可为城市改造提供量化依据。
+\end{enumerate}
+
+\begin{thebibliography}{9}
+\bibitem{yolo11} Ultralytics. YOLO11: The Next Generation of Object Detection. 2024.
+\bibitem{deeplab} Liang-Chieh Chen, et al. Rethinking Atrous Convolution. arXiv, 2017.
+\bibitem{cityscapes} Marius Cordts, et al. The Cityscapes Dataset. CVPR, 2016.
+\bibitem{accessibility} WHO. Global Disability Action Plan 2014-2021. 2014.
+\end{thebibliography}
+
+\end{document}

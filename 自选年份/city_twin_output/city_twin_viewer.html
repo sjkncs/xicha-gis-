@@ -1,0 +1,2625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>南山区精细粒度数字孪生</title>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-minimap@3.6.1/dist/Control.MiniMap.min.css" />
+
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#header {
+    background: linear-gradient(135deg, #161b22, #1c2128);
+    border-bottom: 1px solid #30363d;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    z-index: 1000;
+}
+
+#header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    background: linear-gradient(90deg, #58a6ff, #a371f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+#stats-bar {
+    font-size: 11px;
+    color: #8b949e;
+    margin-left: 12px;
+}
+
+.btn-group {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.ctrl-btn {
+    padding: 4px 10px;
+    border: 1px solid #30363d;
+    border-radius: 5px;
+    background: transparent;
+    color: #8b949e;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+.ctrl-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+.ctrl-btn.active { background: #1f6feb; border-color: #1f6feb; color: white; }
+.ctrl-btn-sm {
+    padding: 2px 7px;
+    background: #21262d;
+    color: #8b949e;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.ctrl-btn-sm.active {
+    background: #1f3a5f;
+    color: #58a6ff;
+    border-color: #388bfd;
+    font-weight: 600;
+}
+}
+.ctrl-btn-sm:hover { border-color: #58a6ff; color: #e6edf3; }
+.spinner-sm {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid #30363d;
+    border-top-color: #58a6ff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+#main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+#sidebar {
+    width: 260px;
+    background: #161b22;
+    border-right: 1px solid #30363d;
+    overflow-y: auto;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+#map { flex: 1; z-index: 1; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #0d1117; }
+::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+.section {
+    border-bottom: 1px solid #21262d;
+    padding: 12px;
+}
+
+.section-title {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8b949e;
+    margin-bottom: 8px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.15s;
+}
+.legend-item:hover { background: #21262d; }
+.legend-item.disabled { opacity: 0.4; }
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+.legend-color.walkability {
+    width: 40px;
+    height: 8px;
+    border-radius: 4px;
+}
+
+.walkability-scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #8b949e;
+    margin-top: 4px;
+}
+
+.bar-bg {
+    height: 5px;
+    background: linear-gradient(to right, #c44, #cc0, #4c4);
+    border-radius: 3px;
+    margin-top: 4px;
+}
+
+/* 轨迹 MarkerCluster 圆圈样式 */
+.traj-cluster {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* 迷你地图样式微调 */
+.leaflet-control-minimap {
+    border: 1px solid #30363d !important;
+    border-radius: 6px !important;
+    overflow: hidden;
+}
+
+/* 加载中覆盖层 */
+#loading {
+    position: fixed;
+    inset: 0;
+    background: rgba(13,17,23,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.4s;
+}
+#loading.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+#loading .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid #30363d;
+    border-top-color: #58a6ff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading p { font-size: 13px; color: #8b949e; }
+
+.info-card {
+    background: #1c2128;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #8b949e;
+    margin-bottom: 4px;
+}
+.info-row span { color: #e6edf3; }
+
+.stat-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #21262d;
+    border-radius: 10px;
+    font-size: 11px;
+    color: #8b949e;
+    margin-right: 4px;
+}
+
+#loading {
+    position: fixed;
+    inset: 0;
+    background: #0d1117;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    gap: 16px;
+}
+#loading.hidden { display: none; }
+.spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #30363d;
+    border-top-color: #58a6ff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading p { font-size: 14px; color: #8b949e; }
+
+.layer-indicator {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #21262d;
+    color: #58a6ff;
+    margin-left: 6px;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 32px;
+    height: 16px;
+    flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #30363d;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.toggle-slider:before {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    left: 2px;
+    bottom: 2px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.2s;
+}
+.toggle-switch input:checked + .toggle-slider { background: #1f6feb; }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(16px); }
+
+.layer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 12px;
+}
+.layer-row .layer-name { display: flex; align-items: center; gap: 6px; }
+</style>
+</head>
+<body>
+
+<div id="loading">
+    <div class="spinner"></div>
+    <p>加载城市数字孪生数据...</p>
+</div>
+
+<div id="header">
+    <div style="display:flex;align-items:center;flex:1;gap:12px;">
+        <h1>南山区精细粒度城市数字孪生</h1>
+        <span id="stats-bar">初始化中...</span>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+            <input type="text" id="addr-search" placeholder="输入地址搜索..." style="background:#21262d;border:1px solid #30363d;color:#e6edf3;padding:4px 8px;border-radius:4px;font-size:12px;width:160px;">
+            <button id="addr-search-btn" style="background:#1f6feb;color:white;border:none;padding:4px 10px;border-radius:4px;font-size:12px;cursor:pointer;">搜索</button>
+            <span id="addr-status" style="font-size:11px;color:#8b949e;display:none;"></span>
+        </div>
+    </div>
+    <div class="btn-group">
+        <button class="ctrl-btn active" data-base="satellite">卫星</button>
+        <button class="ctrl-btn" data-base="dark">深色</button>
+        <button class="ctrl-btn" data-base="streets">街道</button>
+        <button class="ctrl-btn" id="btn-3d" onclick="open3DViewer()" style="margin-left:8px;background:#238636;border-color:#238636;color:#fff;font-weight:600;display:flex;align-items:center;gap:5px;padding:4px 10px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+            </svg>
+            3D 视图
+        </button>
+    </div>
+</div>
+
+<div id="main">
+    <div id="sidebar">
+        <div class="section">
+            <div class="section-title">数据层</div>
+            <div class="layer-row">
+                <span class="layer-name">建筑底座<span class="layer-indicator" id="ind-buildings">-</span></span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-buildings" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="layer-row">
+                <span class="layer-name">路网<span class="layer-indicator" id="ind-roads">后台</span></span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-roads" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="layer-row">
+                <span class="layer-name">连续轨迹<span class="layer-indicator" id="ind-trajectory">-</span></span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-trajectory" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="layer-row">
+                <span class="layer-name">全景点<span class="layer-indicator" id="ind-panorama">-</span></span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-panorama" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="layer-row">
+                <span class="layer-name">设施 POI<span class="layer-indicator" id="ind-poi">-</span></span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="toggle-poi" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 设施类型图例 -->
+        <div class="section">
+            <div class="section-title">设施类型</div>
+            <div id="legend-poi"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">建筑用途类型</div>
+            <div id="legend-use"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">步行可达性 (语义分割)</div>
+            <div class="bar-bg"></div>
+            <div class="walkability-scale">
+                <span>低(0)</span>
+                <span>中(5)</span>
+                <span>高(10)</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">建筑信息</div>
+            <div id="info-panel">
+                <div style="font-size:12px;color:#8b949e;text-align:center;padding:8px;">
+                    点击地图上的建筑查看详情
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">道路类型</div>
+            <div id="legend-roads"></div>
+        </div>
+
+        <!-- 15分钟生活圈 -->
+        <div class="section">
+            <div class="section-title">我的15分钟生活圈</div>
+            <div style="font-size:11px;color:#8b949e;margin-bottom:6px;">
+                点击地图任意位置，查看步行可达设施列表
+            </div>
+            <!-- 半径切换 -->
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;">
+                <button class="ctrl-btn active" id="circle-btn-500" onclick="setWalkCircle(500)">500m</button>
+                <button class="ctrl-btn" id="circle-btn-1000" onclick="setWalkCircle(1000)">1km</button>
+                <button class="ctrl-btn" id="circle-btn-1500" onclick="setWalkCircle(1500)">1.5km</button>
+            </div>
+
+            <!-- 设施类型过滤器 -->
+            <div id="poi-filters" style="display:none;margin-bottom:6px;">
+                <div style="font-size:10px;color:#8b949e;margin-bottom:3px;">筛选:</div>
+                <div style="display:flex;gap:3px;flex-wrap:wrap;" id="filter-chips"></div>
+            </div>
+
+            <!-- 汇总行 -->
+            <div id="circle-summary" style="font-size:11px;color:#e6edf3;padding:6px 8px;background:#21262d;border-radius:4px;margin-bottom:6px;display:none;">
+                <span id="circle-total"></span>
+            </div>
+
+            <!-- 设施列表（可滚动） -->
+            <div id="poi-list" style="display:none;max-height:320px;overflow-y:auto;border-radius:4px;background:#161b22;border:1px solid #30363d;">
+                <div id="poi-list-inner"></div>
+            </div>
+
+            <!-- 清除按钮 -->
+            <div style="margin-top:8px;">
+                <button onclick="clearWalkCircle()" style="background:#21262d;color:#e6edf3;border:1px solid #30363d;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;width:100%;">清除</button>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════ -->
+        <!-- 路由分析面板（对接 FastAPI 后端） -->
+        <!-- ═══════════════════════════════════════════════════ -->
+        <div class="section">
+            <div class="section-title">路径规划</div>
+            <div style="font-size:11px;color:#8b949e;margin-bottom:8px;">
+                点击地图设置起点，自动规划到最近设施的步行路线
+            </div>
+
+            <!-- 起点/终点 -->
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+                <div style="flex:1;">
+                    <div style="font-size:10px;color:#6e7681;margin-bottom:2px;">起点</div>
+                    <div id="route-from" style="background:#21262d;border:1px solid #30363d;border-radius:4px;padding:5px 8px;font-size:11px;color:#e6edf3;min-height:18px;">
+                        <span style="color:#6e7681">点击地图选择</span>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;padding-top:18px;color:#6e7681;">→</div>
+                <div style="flex:1;">
+                    <div style="font-size:10px;color:#6e7681;margin-bottom:2px;">终点</div>
+                    <div id="route-to" style="background:#21262d;border:1px solid #30363d;border-radius:4px;padding:5px 8px;font-size:11px;color:#e6edf3;min-height:18px;">
+                        <span style="color:#6e7681">点击设施选择</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 快捷设施按钮 -->
+            <div style="font-size:10px;color:#6e7681;margin-bottom:4px;">快速选择终点类型:</div>
+            <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:8px;">
+                <button class="ctrl-btn-sm" onclick="selectDestination('school')" title="学校">学校</button>
+                <button class="ctrl-btn-sm" onclick="selectDestination('hospital')" title="医疗">医疗</button>
+                <button class="ctrl-btn-sm" onclick="selectDestination('park')" title="公园">公园</button>
+                <button class="ctrl-btn-sm" onclick="selectDestination('market')" title="菜市场">菜场</button>
+                <button class="ctrl-btn-sm" onclick="selectDestination('transit')" title="交通">交通</button>
+                <button class="ctrl-btn-sm" onclick="selectDestination('restaurant')" title="餐饮">餐饮</button>
+                <button class="ctrl-btn-sm" onclick="selectDestination('shopping')" title="购物">购物</button>
+                <button class="ctrl-btn-sm" onclick="selectDestination('bank')" title="金融">金融</button>
+            </div>
+
+            <!-- 等时圈阈值 -->
+            <div style="font-size:10px;color:#6e7681;margin-bottom:4px;">等时圈阈值:</div>
+            <div style="display:flex;gap:4px;margin-bottom:8px;">
+                <button class="ctrl-btn active" id="iso-btn-10" onclick="setIsochrone(10)">10分钟</button>
+                <button class="ctrl-btn" id="iso-btn-15" onclick="setIsochrone(15)">15分钟</button>
+                <button class="ctrl-btn" id="iso-btn-20" onclick="setIsochrone(20)">20分钟</button>
+            </div>
+
+            <!-- 等时圈显示开关 -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:#8b949e;">
+                    <input type="checkbox" id="toggle-isochrone" onchange="toggleIsochrone()" checked>
+                    <span>显示等时圈</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:#8b949e;">
+                    <input type="checkbox" id="toggle-route" onchange="toggleRoute()" checked>
+                    <span>显示路线</span>
+                </label>
+            </div>
+
+            <!-- 规划按钮 -->
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+                <button onclick="planRoute()" style="flex:1;background:#238636;color:#fff;border:none;padding:6px 10px;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">
+                    规划步行路线
+                </button>
+                <button onclick="computeIsochrone()" style="flex:1;background:#1f6feb;color:#fff;border:none;padding:6px 10px;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;">
+                    计算等时圈
+                </button>
+            </div>
+
+            <!-- 路线结果 -->
+            <div id="route-result" style="display:none;background:#161b22;border:1px solid #30363d;border-radius:4px;padding:8px;">
+                <div id="route-result-header" style="font-size:11px;color:#e6edf3;margin-bottom:6px;"></div>
+                <div id="route-result-body" style="max-height:200px;overflow-y:auto;"></div>
+            </div>
+
+            <!-- 加载状态 -->
+            <div id="route-loading" style="display:none;text-align:center;padding:10px;">
+                <div class="spinner-sm"></div>
+                <div style="font-size:11px;color:#8b949e;margin-top:4px;">规划中...</div>
+            </div>
+
+            <!-- 清除路由 -->
+            <div style="margin-top:6px;">
+                <button onclick="clearAllRoute()" style="background:#21262d;color:#8b949e;border:1px solid #30363d;padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer;width:100%;">清除所有</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet-minimap@3.6.1/dist/Control.MiniMap.min.js"></script>
+
+<script>
+// ============================================================
+// 地图初始化
+// ============================================================
+const map = L.map('map', {
+    center: [22.53, 113.94],
+    zoom: 14,
+    zoomControl: true,
+    preferCanvas: true,
+});
+
+const baseLayers = {
+    satellite: L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 19 }
+    ),
+    dark: L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+        { maxZoom: 19 }
+    ),
+    streets: L.tileLayer(
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        { maxZoom: 19 }
+    ),
+};
+
+let currentBase = 'satellite';
+baseLayers.satellite.addTo(map);
+L.control.scale({ imperial: false, maxWidth: 150, position: 'bottomright' }).addTo(map);
+
+// 小地图（鹰眼）
+const miniBase = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
+new L.Control.MiniMap(miniBase, { toggleDisplay: true, minimized: false, position: 'bottomleft' }).addTo(map);
+
+// ============================================================
+// 颜色映射
+// ============================================================
+const USE_COLORS = {
+    1: '#78b4dc', 2: '#ffc850', 3: '#c864dc',
+    4: '#b46450', 5: '#50a064', 6: '#dc5050',
+    7: '#dc963c', 8: '#64c8dc', 9: '#b4b4b4',
+};
+const USE_NAMES = {
+    1: '住宅', 2: '商业', 3: '办公',
+    4: '工业', 5: '文体', 6: '医疗',
+    7: '文化', 8: '科教', 9: '其他',
+};
+const ROAD_COLORS = {
+    primary: '#ff6b35',
+    secondary: '#ffd23f',
+    tertiary: '#3ec300',
+    residential: '#7b8794',
+    service: '#7b8794',
+    footway: '#9999aa',
+    path: '#9999aa',
+    trunk: '#ff4444',
+    motorway: '#ff2222',
+    unclassified: '#aaaaaa',
+};
+
+function getWalkabilityColor(score) {
+    if (score == null) return '#484f58';
+    score = Math.max(0, Math.min(10, score));
+    const t = score / 10;
+    let r, g, b;
+    if (t < 0.4) {
+        r = 255; g = Math.round(120 + 135 * t / 0.4); b = 80;
+    } else if (t < 0.7) {
+        r = Math.round(255 - 255 * (t - 0.4) / 0.3);
+        g = Math.round(255 - 135 * (t - 0.4) / 0.3); b = 80;
+    } else {
+        r = Math.round(255 * (1 - t) / 0.3);
+        g = 255; b = Math.round(80 + 175 * (t - 0.7) / 0.3);
+    }
+    return `rgb(${r},${g},${b})`;
+}
+
+// ============================================================
+// 数据层
+// ============================================================
+let layerBuildings, layerRoads, layerTrajectory, layerPanorama, layerPOI;
+const layerToggles = {
+    buildings: { el: null, layer: null, defaultOpacity: 0.65 },
+    roads: { el: null, layer: null, defaultOpacity: 0.8 },
+    trajectory: { el: null, layer: null, defaultOpacity: 0.9 },
+    panorama: { el: null, layer: null, defaultOpacity: 1.0 },
+    poi: { el: null, layer: null, defaultOpacity: 1.0 },
+};
+
+const FACILITY_COLORS_JS = {
+    school: '#4CAF50',
+    hospital: '#F44336',
+    park: '#8BC34A',
+    market: '#FF9800',
+    metro: '#3F51B5',
+    bus: '#9C27B0',
+    // 扩展类型（路网分析返回）
+    shopping: '#E91E63',
+    restaurant: '#FF5722',
+    transit: '#00BCD4',
+    public: '#607D8B',
+    company: '#795548',
+    government: '#37474F',
+    office: '#9E9E9E',
+    hotel: '#8D6E63',
+    life: '#A1887F',
+    entertainment: '#CE93D8',
+    car: '#90A4AE',
+    sports: '#4DD0E1',
+    bank: '#FFD54F',
+    tourism: '#FF8A65',
+    other: '#BDBDBD',
+    // 中文类别（POI层直接用中文名）
+    '购物服务': '#E91E63',
+    '餐饮服务': '#FF5722',
+    '教育培训': '#4CAF50',
+    '医疗保健': '#F44336',
+    '交通设施': '#00BCD4',
+    '公共设施': '#607D8B',
+    '公司企业': '#795548',
+    '政府机构': '#37474F',
+    '商务写字楼': '#9E9E9E',
+    '住宿服务': '#8D6E63',
+    '酒店住宿': '#8D6E63',
+    '生活服务': '#A1887F',
+    '休闲娱乐': '#CE93D8',
+    '其他': '#BDBDBD',
+};
+const FACILITY_NAMES_JS = {
+    school: '学校/科教',
+    hospital: '医疗保健',
+    park: '公园绿化',
+    market: '菜市场',
+    metro: '地铁站',
+    bus: '公交站',
+    // 扩展类型
+    shopping: '购物服务',
+    restaurant: '餐饮服务',
+    transit: '交通设施',
+    public: '公共设施',
+    company: '公司企业',
+    government: '政府机构',
+    office: '商务写字楼',
+    hotel: '住宿服务',
+    life: '生活服务',
+    entertainment: '休闲娱乐',
+    car: '汽车相关',
+    sports: '运动健身',
+    bank: '金融机构',
+    tourism: '旅游景点',
+    other: '其他',
+    // 中文类别（POI层直接用中文名）
+    '购物服务': '购物服务',
+    '餐饮服务': '餐饮服务',
+    '教育培训': '教育培训',
+    '医疗保健': '医疗保健',
+    '交通设施': '交通设施',
+    '公共设施': '公共设施',
+    '公司企业': '公司企业',
+    '政府机构': '政府机构',
+    '商务写字楼': '商务写字楼',
+    '住宿服务': '住宿服务',
+    '酒店住宿': '酒店住宿',
+    '生活服务': '生活服务',
+    '休闲娱乐': '休闲娱乐',
+    '其他': '其他',
+};
+
+// ============================================================
+// 数据层：通过 fetch 异步加载外部 JSON 文件
+// ============================================================
+let BASE_DATA = null;
+let ROADS_DATA = null;
+let TRAJ_DATA = null;
+let buildings = [], roads = [], panorama = [], poi = [];
+let colorMode = 'walkability'; // 建筑着色模式
+let roadsLoaded = false;
+let roadsLoading = false;
+const CORE_DATA_URL = './base_core_data.json';
+const ROADS_DATA_URL = './roads_data.json';
+const TRAJ_DATA_URL = './trajectory_data.json';
+
+function fetchJson(url) {
+    return fetch(url, { cache: 'force-cache', headers: { 'Accept': 'application/json' } })
+        .then(r => {
+            if (!r.ok) throw new Error(`${url} 返回 ${r.status}`);
+            return r.json();
+        });
+}
+
+function updateStatsBar(trajectoryText) {
+    const trajText = trajectoryText || document.getElementById('ind-trajectory').textContent || '-';
+    document.getElementById('stats-bar').textContent =
+        `${buildings.length.toLocaleString()} 栋 | ${roads.length.toLocaleString()} 条 | 轨迹 ${trajText} | 全景 ${panorama.length.toLocaleString()}`;
+}
+
+function loadBaseThenTraj() {
+    fetchJson(CORE_DATA_URL)
+        .then(data => {
+            BASE_DATA = data;
+            buildings = (data.features || []).filter(f => f.geometry.type === 'Polygon');
+            roads = (data.features || []).filter(f => f.properties && f.properties.layer === 'road');
+            panorama = (data.features || []).filter(f => f.geometry.type === 'Point' && f.properties.layer === 'panorama');
+            poi = (data.features || []).filter(f => f.geometry.type === 'Point' && f.properties.layer === 'poi');
+            initLayers();
+            window.setTimeout(loadRoadsLayerDeferred, 700);
+            fetchJson(TRAJ_DATA_URL)
+                .then(traj => {
+                    TRAJ_DATA = traj;
+                    initTrajectoryLayer();
+                })
+                .catch(() => { document.getElementById('ind-trajectory').textContent = '0'; });
+        })
+        .catch(err => {
+            console.error('加载底图数据失败:', err);
+            document.getElementById('loading').classList.add('hidden');
+        });
+}
+
+function initLayers() {
+    document.getElementById('ind-buildings').textContent = buildings.length.toLocaleString();
+    document.getElementById('ind-roads').textContent = roads.length ? roads.length.toLocaleString() : '后台';
+    document.getElementById('ind-trajectory').textContent = '-';
+    document.getElementById('ind-panorama').textContent = panorama.length.toLocaleString();
+    document.getElementById('ind-poi').textContent = poi.length.toLocaleString();
+    updateStatsBar('加载中...');
+
+    // 建筑图例
+const useTypes = [...new Set(buildings.map(f => f.properties.use_type))];
+const legendDiv = document.getElementById('legend-use');
+legendDiv.innerHTML = useTypes.map(ut => {
+    const name = USE_NAMES[ut] || ut;
+    const color = USE_COLORS[ut] || '#b4b4b4';
+    return `<div class="legend-item" data-type="${ut}">
+        <div class="legend-color" style="background:${color}"></div>
+        <span>${name}</span>
+    </div>`;
+}).join('');
+
+// 道路图例
+const roadTypes = [...new Set(roads.map(f => f.properties.fclass))];
+const roadLegend = document.getElementById('legend-roads');
+roadLegend.innerHTML = roadTypes.map(fc => {
+    const color = ROAD_COLORS[fc] || '#7b8794';
+    return `<div class="legend-item">
+        <div class="legend-color" style="background:${color}"></div>
+        <span>${fc || 'unknown'}</span>
+    </div>`;
+}).join('');
+if (roadTypes.length === 0) {
+    roadLegend.innerHTML = '<div class="legend-item"><div class="legend-color" style="background:#7b8794"></div><span>道路图层后台加载中</span></div>';
+}
+
+// 设施 POI 图例
+const poiTypes = [...new Set(poi.map(f => f.properties.facility_type))];
+const poiLegend = document.getElementById('legend-poi');
+poiLegend.innerHTML = poiTypes.map(ft => {
+    const color = FACILITY_COLORS_JS[ft] || '#888888';
+    const name = FACILITY_NAMES_JS[ft] || ft;
+    return `<div class="legend-item">
+        <div class="legend-color" style="background:${color}"></div>
+        <span>${name} (${poi.filter(f => f.properties.facility_type === ft).length})</span>
+    </div>`;
+}).join('');
+
+    // 道路层
+    if (roads.length > 0) {
+        layerRoads = L.geoJSON({ type: 'FeatureCollection', features: roads }, {
+            renderer: L.canvas({ padding: 0.5 }),
+            style: feature => {
+                const fc = feature.properties.fclass || '';
+                const weights = { primary: 4, secondary: 3, tertiary: 2.5, trunk: 4, motorway: 4, residential: 1.5, service: 1, footway: 1, path: 1, unclassified: 1 };
+                return {
+                    color: ROAD_COLORS[fc] || '#7b8794',
+                    weight: weights[fc] || 1.5,
+                    opacity: 0.8,
+                };
+            },
+            onEachFeature: (f, layer) => {
+                layer.bindTooltip(`${f.properties.road_type || f.properties.fclass || '未知道路'} ${f.properties.name || ''}`, {sticky: false, className: 'leaflet-tooltip-dark'});
+            }
+        });
+        layerToggles.roads.layer = layerRoads;
+        layerRoads.addTo(map);
+    }
+
+    // 全景点层
+    if (panorama.length > 0) {
+        layerPanorama = L.geoJSON({ type: 'FeatureCollection', features: panorama }, {
+            pointToLayer: (f, latlng) => {
+                return L.circleMarker(latlng, {
+                    radius: 6,
+                    fillColor: '#a371f7',
+                    color: '#8b5f6',
+                    weight: 1.5,
+                    fillOpacity: 0.9,
+                });
+            },
+            onEachFeature: (f, layer) => {
+                const p = f.properties;
+                layer.bindTooltip(
+                    `全景点<br>${p.township || ''} ${p.road_name || ''}<br>朝向: ${p.heading || ''} (${p.year || ''})`,
+                    {sticky: false, className: 'leaflet-tooltip-dark'}
+                );
+                layer.on('click', () => showInfoPanel('panorama', p));
+            }
+        });
+        layerToggles.panorama.layer = layerPanorama;
+        layerPanorama.addTo(map);
+    }
+
+    // 设施 POI 层
+    if (poi.length > 0) {
+        layerPOI = L.geoJSON({ type: 'FeatureCollection', features: poi }, {
+            pointToLayer: (f, latlng) => {
+                const ft = f.properties.facility_type || '';
+                const color = FACILITY_COLORS_JS[ft] || '#888888';
+                return L.circleMarker(latlng, {
+                    radius: 5,
+                    fillColor: color,
+                    color: '#ffffff',
+                    weight: 1,
+                    fillOpacity: 0.85,
+                });
+            },
+            onEachFeature: (f, layer) => {
+                const p = f.properties;
+                const ft = p.facility_type || '';
+                const ftCn = FACILITY_NAMES_JS[ft] || ft;
+                layer.bindTooltip(
+                    `<b>${p.name || '设施'}</b><br>${p.category1 || ''} ${p.category2 || ''}<br><span style="color:${FACILITY_COLORS_JS[ft] || '#888'}">${ftCn}</span>`,
+                    {sticky: false, className: 'leaflet-tooltip-dark'}
+                );
+                layer.on('click', () => showInfoPanel('poi', p));
+            }
+        });
+        layerToggles.poi.layer = layerPOI;
+        layerPOI.addTo(map);
+    }
+
+    // 建筑层（默认按可达性着色，可切换用途）
+    let colorMode = 'walkability';
+
+    layerBuildings = L.geoJSON({ type: 'FeatureCollection', features: buildings }, {
+        style: feature => {
+            const p = feature.properties;
+            if (colorMode === 'walkability') {
+                const ws = p.walkability;
+                const color = ws != null ? getWalkabilityColor(parseFloat(ws)*10) : '#484f58';
+                return { fillColor: color, color: color, weight: 0.3, fillOpacity: 0.6, opacity: 0.3 };
+            } else {
+                const color = USE_COLORS[p.use_type] || '#b4b4b4';
+                return { fillColor: color, color: '#ffffff44', weight: 0.5, fillOpacity: 0.7, opacity: 0.5 };
+            }
+        },
+        onEachFeature: (f, layer) => {
+            const p = f.properties;
+            const ws = p.walkability;
+            const wsStr = ws != null ? `${(parseFloat(ws)*10).toFixed(1)}/10` : 'N/A';
+            const color = ws != null ? getWalkabilityColor(parseFloat(ws)*10) : '#484f58';
+            const nameOrAddr = p.name || p.addr || (p.use_name ? p.use_name + '建筑' : '未知道建筑');
+            layer.bindTooltip(
+                `建筑: ${nameOrAddr}<br>${p.use_name || '其他'} | ${p.floors || 1}层 | ${p.height_m ? parseFloat(p.height_m).toFixed(0) + 'm' : '-'}<br>可达性: <span style="color:${color}">${wsStr}</span>`,
+                {sticky: true, className: 'leaflet-tooltip-dark'}
+            );
+            layer.on('click', () => showInfoPanel('building', p));
+        }
+    });
+    layerToggles.buildings.layer = layerBuildings;
+    layerBuildings.addTo(map);
+
+    // 点击图例切换着色模式
+    document.getElementById('legend-use').addEventListener('click', (e) => {
+        const item = e.target.closest('.legend-item');
+        if (!item) return;
+        colorMode = 'use';
+        if (layerBuildings) layerBuildings.setStyle(f => {
+            const color = USE_COLORS[f.properties.use_type] || '#b4b4b4';
+            return { fillColor: color, color: '#ffffff44', weight: 0.5, fillOpacity: 0.7, opacity: 0.5 };
+        });
+    });
+
+    // 隐藏加载
+    document.getElementById('loading').classList.add('hidden');
+}
+
+function loadRoadsLayerDeferred() {
+    if (roadsLoaded || roadsLoading) return;
+    roadsLoading = true;
+    const roadLegend = document.getElementById('legend-roads');
+    if (roadLegend) {
+        roadLegend.innerHTML = '<div class="legend-item"><div class="legend-color" style="background:#7b8794"></div><span>道路图层加载中</span></div>';
+    }
+    fetchJson(ROADS_DATA_URL)
+        .then(data => {
+            ROADS_DATA = data;
+            roads = (data.features || []).filter(f => f.properties && f.properties.layer === 'road');
+            roadsLoaded = true;
+            renderRoadLayer();
+            document.getElementById('ind-roads').textContent = roads.length.toLocaleString();
+            updateStatsBar();
+        })
+        .catch(err => {
+            console.warn('道路图层加载失败:', err);
+            if (roadLegend) {
+                roadLegend.innerHTML = '<div class="legend-item"><div class="legend-color" style="background:#da3633"></div><span>道路图层加载失败</span></div>';
+            }
+        })
+        .finally(() => {
+            roadsLoading = false;
+        });
+}
+
+function renderRoadLayer() {
+    if (!roads.length) return;
+    if (layerRoads && map.hasLayer(layerRoads)) {
+        map.removeLayer(layerRoads);
+    }
+    const roadTypes = [...new Set(roads.map(f => f.properties.fclass))];
+    const roadLegend = document.getElementById('legend-roads');
+    if (roadLegend) {
+        roadLegend.innerHTML = roadTypes.map(fc => {
+            const color = ROAD_COLORS[fc] || '#7b8794';
+            return `<div class="legend-item">
+                <div class="legend-color" style="background:${color}"></div>
+                <span>${fc || 'unknown'}</span>
+            </div>`;
+        }).join('');
+    }
+    layerRoads = L.geoJSON({ type: 'FeatureCollection', features: roads }, {
+        renderer: L.canvas({ padding: 0.5 }),
+        style: feature => {
+            const fc = feature.properties.fclass || '';
+            const weights = { primary: 4, secondary: 3, tertiary: 2.5, trunk: 4, motorway: 4, residential: 1.5, service: 1, footway: 1, path: 1, unclassified: 1 };
+            return {
+                color: ROAD_COLORS[fc] || '#7b8794',
+                weight: weights[fc] || 1.5,
+                opacity: 0.8,
+            };
+        },
+        onEachFeature: (f, layer) => {
+            layer.bindTooltip(`🛣️ ${f.properties.road_type || f.properties.fclass || '未知道路'} ${f.properties.name || ''}`, {sticky: false, className: 'leaflet-tooltip-dark'});
+        }
+    });
+    layerToggles.roads.layer = layerRoads;
+    const roadsToggle = document.getElementById('toggle-roads');
+    if (!roadsToggle || roadsToggle.checked) {
+        layerRoads.addTo(map);
+    }
+}
+
+// 轨迹层（异步加载 + MarkerCluster 聚合）
+let trajectoryLoaded = false;
+let trajectoryMarkers = null;
+let trajectoryClusterGroup = null;
+
+function getMaxTrajPointsForZoom(zoom) {
+    if (zoom >= 16) return 50000;
+    if (zoom >= 15) return 20000;
+    if (zoom >= 14) return 10000;
+    if (zoom >= 13) return 5000;
+    if (zoom >= 12) return 2000;
+    if (zoom >= 11) return 1000;
+    return 500;
+}
+
+function getTrajColor(ws) {
+    if (ws == null || ws === '') return '#58a6ff';
+    const score = parseFloat(ws);
+    if (isNaN(score)) return '#58a6ff';
+    const t = Math.max(0, Math.min(1, score));
+    if (t < 0.4) return `rgb(255,${Math.round(120 + 135*t/0.4)},80)`;
+    if (t < 0.7) return `rgb(${Math.round(255 - 255*(t-0.4)/0.3)},${Math.round(255 - 135*(t-0.4)/0.3)},80)`;
+    return `rgb(${Math.round(255*(1-t)/0.3)},255,${Math.round(80 + 175*t/0.3)})`;
+}
+
+function getTrajLabel(p) {
+    const road = p.fclass_cn || p.fclass || '未知道路';
+    const urban = p.urban_label || p.urban_form || '';
+    const density = p.building_density_zh || p.building_density || '';
+    const floors = p.avg_floors ? `${p.avg_floors.toFixed(1)}层` : '';
+    const ws = p.walkability;
+    const wsStr = ws != null && ws !== '' ? `${(parseFloat(ws)*10).toFixed(1)}/10` : 'N/A';
+    return `轨迹 #${p.pt_id}
+道路: ${road} ${p.name||''}
+形态: ${urban} ${floors}
+密度: ${density}
+可达性: ${wsStr}`;
+}
+
+function loadTrajectoryPoints(limit) {
+    if (!TRAJ_DATA || !TRAJ_DATA.features) return [];
+    return TRAJ_DATA.features.slice(0, Math.min(limit, TRAJ_DATA.features.length));
+}
+
+function initTrajectoryLayer() {
+    if (!TRAJ_DATA || !TRAJ_DATA.features || TRAJ_DATA.features.length === 0) {
+        document.getElementById('ind-trajectory').textContent = '0';
+        updateStatsBar('0');
+        return;
+    }
+    const zoom = map.getZoom();
+    const maxPts = getMaxTrajPointsForZoom(zoom);
+    renderTrajectoryPoints(maxPts);
+    layerToggles.trajectory = { layer: trajectoryClusterGroup, visible: true, defaultOpacity: 0.9 };
+}
+
+function renderTrajectoryPoints(maxPoints) {
+    const pts = loadTrajectoryPoints(maxPoints);
+    if (trajectoryClusterGroup) {
+        map.removeLayer(trajectoryClusterGroup);
+        trajectoryClusterGroup = null;
+    }
+    trajectoryClusterGroup = L.markerClusterGroup({
+        chunkedLoading: true,
+        chunkInterval: 100,
+        chunkDelay: 50,
+        maxClusterRadius: 50,
+        spiderfyOnMaxZoom: false,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+        iconCreateFunction: function(cluster) {
+            const count = cluster.getChildCount();
+            const size = count < 100 ? 'small' : count < 500 ? 'medium' : 'large';
+            const r = size === 'small' ? 30 : size === 'medium' ? 40 : 50;
+            return L.divIcon({
+                html: `<div style="background:rgba(88,166,255,0.85);border-radius:50%;width:${r}px;height:${r}px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;border:2px solid rgba(255,255,255,0.4);box-shadow:0 2px 8px rgba(0,0,0,0.4);">${count>=1000?(count/1000).toFixed(0)+'k':count}</div>`,
+                className: 'traj-cluster',
+                iconSize: [r, r],
+                iconAnchor: [r/2, r/2],
+            });
+        }
+    });
+    pts.forEach(f => {
+        const latlng = L.latLng(f.geometry.coordinates[1], f.geometry.coordinates[0]);
+        const p = f.properties;
+        const color = getTrajColor(p.walkability);
+        const marker = L.circleMarker(latlng, {
+            radius: 4,
+            fillColor: color,
+            color: '#fff',
+            weight: 1,
+            fillOpacity: 0.9,
+            opacity: 0.9,
+        });
+        marker.bindTooltip(getTrajLabel(p), {sticky: false, className: 'leaflet-tooltip-dark', direction: 'top'});
+        marker.on('click', () => showInfoPanel('trajectory', p));
+        trajectoryClusterGroup.addLayer(marker);
+    });
+    map.addLayer(trajectoryClusterGroup);
+    trajectoryLoaded = true;
+    const total = TRAJ_DATA && TRAJ_DATA.features ? TRAJ_DATA.features.length : 0;
+    document.getElementById('ind-trajectory').textContent = `${pts.length.toLocaleString()}/${total.toLocaleString()}`;
+    document.getElementById('stats-bar').textContent =
+        `${buildings.length.toLocaleString()} 栋 | ${roads.length.toLocaleString()} 条 | 轨迹 ${pts.length.toLocaleString()} | 全景 ${panorama.length.toLocaleString()}`;
+}
+
+// 底图加载完成后，延迟加载轨迹层
+map.whenReady(() => {
+    setTimeout(() => {
+        if (!TRAJ_DATA) return;
+        const zoom = map.getZoom();
+        const maxPts = getMaxTrajPointsForZoom(zoom);
+        renderTrajectoryPoints(maxPts);
+        layerToggles.trajectory = { layer: trajectoryClusterGroup, visible: true };
+    }, 500);
+});
+
+// 缩放时重新渲染轨迹
+map.on('zoomend', () => {
+    if (!trajectoryLoaded || !TRAJ_DATA) return;
+    const zoom = map.getZoom();
+    const maxPts = getMaxTrajPointsForZoom(zoom);
+    renderTrajectoryPoints(maxPts);
+    if (layerToggles.trajectory && layerToggles.trajectory.layer) {
+        layerToggles.trajectory.visible = true;
+        if (!map.hasLayer(layerToggles.trajectory.layer)) {
+            map.addLayer(layerToggles.trajectory.layer);
+        }
+    }
+});
+
+// ============================================================
+// 信息面板
+// ============================================================
+function showInfoPanel(type, p) {
+    const panel = document.getElementById('info-panel');
+    if (type === 'building') {
+        const ws = p.walkability;
+        const wsStr = ws != null ? `${(parseFloat(ws)*10).toFixed(1)}/10` : '无数据';
+        const wsColor = ws != null ? getWalkabilityColor(parseFloat(ws)*10) : '#484f58';
+        panel.innerHTML = `
+            <div class="info-row">名称: <span>${p.name || p.addr || p.use_name + '建筑' || '未知道建筑'}</span></div>
+            <div class="info-row">地址: <span>${p.addr || '-'}</span></div>
+            <div class="info-row">用途: <span>${p.use_name || '其他'}</span></div>
+            <div class="info-row">层数: <span>${p.floors || 1} 层</span></div>
+            <div class="info-row">高度: <span>${p.height_m ? parseFloat(p.height_m).toFixed(1) + 'm' : '-'}</span></div>
+            <div class="info-row">坐标: <span>${p.lon ? parseFloat(p.lon).toFixed(5) + ', ' + parseFloat(p.lat).toFixed(5) : '-'}</span></div>
+            <div class="info-row">可达性: <span style="color:${wsColor}">${wsStr}</span></div>
+        `;
+    } else if (type === 'trajectory') {
+        const ws = p.walkability;
+        const wsStr = ws != null ? `${(parseFloat(ws)*10).toFixed(1)}/10` : '无数据';
+        const wsColor = ws != null ? getWalkabilityColor(parseFloat(ws)*10) : '#484f58';
+        panel.innerHTML = `
+            <div class="info-row">道路: <span>${p.fclass_cn || p.name || p.fclass || '未知道路'}</span></div>
+            <div class="info-row">路名: <span>${p.name || '-'}</span></div>
+            <div class="info-row">形态: <span>${p.urban_label || p.urban_form || '未知'}</span></div>
+            <div class="info-row">密度: <span>${p.building_density_zh || p.building_density || '未知'}</span></div>
+            <div class="info-row">平均层数: <span>${p.avg_floors ? parseFloat(p.avg_floors).toFixed(1) + ' 层' : '-'}</span></div>
+            <div class="info-row">朝向: <span>${p.heading_label || p.heading || '-'}</span></div>
+            <div class="info-row">可达性: <span style="color:${wsColor}">${wsStr}</span></div>
+            <div class="info-row">位置ID: <span>#${p.pt_id || '-'}</span></div>
+        `;
+    } else if (type === 'panorama') {
+        panel.innerHTML = `
+            <div class="info-row">地点: <span>${p.township || '-'}</span></div>
+            <div class="info-row">道路: <span>${p.road_name || p.name || '-'}</span></div>
+            <div class="info-row">朝向: <span>${p.heading || '-'}</span></div>
+            <div class="info-row">年份: <span>${p.year || '-'}</span></div>
+            <div class="info-row">坐标: <span>${p.lon ? parseFloat(p.lon).toFixed(5) + ', ' + parseFloat(p.lat).toFixed(5) : '-'}</span></div>
+        `;
+    } else if (type === 'poi') {
+        panel.innerHTML = `
+            <div class="info-row">名称: <span>${p.name || p.poi_name || '未知设施'}</span></div>
+            <div class="info-row">类别: <span>${p.facility_type_cn || p.facility_type || '未知'}</span></div>
+            <div class="info-row">地址: <span>${p.addr || p.address || '-'}</span></div>
+            <div class="info-row">坐标: <span>${p.lon ? parseFloat(p.lon).toFixed(5) + ', ' + parseFloat(p.lat).toFixed(5) : '-'}</span></div>
+        `;
+    }
+}
+
+// ============================================================
+// 底图切换
+// ============================================================
+document.querySelectorAll('[data-base]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-base]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const mode = btn.dataset.base;
+        if (baseLayers[currentBase]) map.removeLayer(baseLayers[currentBase]);
+        baseLayers[mode].addTo(map);
+        currentBase = mode;
+    });
+});
+
+// ============================================================
+// 图层切换
+// ============================================================
+const toggleMap = {
+    buildings: document.getElementById('toggle-buildings'),
+    roads: document.getElementById('toggle-roads'),
+    trajectory: document.getElementById('toggle-trajectory'),
+    panorama: document.getElementById('toggle-panorama'),
+    poi: document.getElementById('toggle-poi'),
+};
+
+Object.entries(toggleMap).forEach(([key, el]) => {
+    if (!el) return;
+    el.addEventListener('change', () => {
+        if (key === 'roads' && el.checked && !layerToggles.roads.layer) {
+            loadRoadsLayerDeferred();
+            return;
+        }
+        const info = layerToggles[key];
+        if (!info || !info.layer) return;
+        if (el.checked) {
+            info.layer.addTo(map);
+        } else {
+            map.removeLayer(info.layer);
+        }
+    });
+});
+
+// ============================================================
+// 地址搜索（使用 Nominatim API，无需 key）
+// ============================================================
+let searchMarker = null;
+document.getElementById('addr-search-btn').addEventListener('click', doAddressSearch);
+document.getElementById('addr-search').addEventListener('keydown', e => { if (e.key === 'Enter') doAddressSearch(); });
+
+function doAddressSearch() {
+    const query = document.getElementById('addr-search').value.trim();
+    if (!query) return;
+    const status = document.getElementById('addr-status');
+    status.textContent = '搜索中...';
+    status.style.display = 'inline';
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', 南山区, 深圳')}&limit=1`;
+    fetch(url, { headers: { 'Accept': 'application/json' } })
+        .then(r => r.json())
+        .then(results => {
+            if (results.length > 0) {
+                const r = results[0];
+                const lat = parseFloat(r.lat);
+                const lon = parseFloat(r.lon);
+                if (searchMarker) map.removeLayer(searchMarker);
+                searchMarker = L.circleMarker([lat, lon], {
+                    radius: 10, color: '#ff6b6b', fillColor: '#ff6b6b',
+                    fillOpacity: 0.8, weight: 3,
+                }).addTo(map).bindPopup(`<b>${r.display_name.split(',')[0]}</b><br>${r.display_name}`).openPopup();
+                map.setView([lat, lon], 17);
+                status.textContent = '已定位';
+                setTimeout(() => { status.style.display = 'none'; }, 3000);
+            } else {
+                status.textContent = '未找到';
+                setTimeout(() => { status.style.display = 'none'; }, 3000);
+            }
+        })
+        .catch(() => {
+            status.textContent = '搜索失败';
+            setTimeout(() => { status.style.display = 'none'; }, 3000);
+        });
+}
+
+// ============================================================
+// 15分钟生活圈（步行可达 + 设施详细列表）
+// ============================================================
+let walkCircleLayer = null;
+let walkCircleMarker = null;
+let walkCircleRadius = 500;
+let clickedLatLng = null;
+// 从 POI 数据动态获取所有设施类型作为默认筛选
+var defaultActiveFilters = ['学校','医院','诊所','公园','超市','菜市场','市场','地铁站','公交站'];
+poi.forEach(function(f) {
+    var ft = f.properties.facility_type;
+    if (ft && ft.trim() !== '') defaultActiveFilters.push(ft);
+});
+var uniqueFts = [...new Set(defaultActiveFilters)];
+// 去重英文（不重复添加）
+var enFts = ['school','hospital','park','market','metro','bus'];
+enFts.forEach(function(eft) { if (!uniqueFts.includes(eft)) uniqueFts.push(eft); });
+let activeFilters = new Set(uniqueFts);
+
+// 点击地图 → 画圈 + 设施列表
+map.on('click', e => {
+    clickedLatLng = e.latlng;
+    if (walkCircleLayer) map.removeLayer(walkCircleLayer);
+    if (walkCircleMarker) map.removeLayer(walkCircleMarker);
+    drawWalkCircle(e.latlng, walkCircleRadius);
+    updateCircleInfo(e.latlng);
+});
+
+function setWalkCircle(r) {
+    walkCircleRadius = r;
+    document.querySelectorAll('[id^="circle-btn-"]').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('circle-btn-' + r);
+    if (btn) btn.classList.add('active');
+    if (clickedLatLng) {
+        if (walkCircleLayer) map.removeLayer(walkCircleLayer);
+        drawWalkCircle(clickedLatLng, r);
+        updateCircleInfo(clickedLatLng);
+    }
+}
+
+function drawWalkCircle(latlng, radius) {
+    walkCircleLayer = L.circle(latlng, {
+        radius: radius,
+        color: '#ff6b35',
+        fillColor: '#ff6b35',
+        fillOpacity: 0.08,
+        weight: 2,
+        dashArray: '6 4',
+    }).addTo(map);
+    walkCircleMarker = L.circleMarker(latlng, {
+        radius: 6, color: '#ff6b35', fillColor: '#ffffff', fillOpacity: 1, weight: 2,
+    }).addTo(map);
+}
+
+function getDirection(fromLat, fromLng, toLat, toLng) {
+    const dLon = (toLng - fromLng) * Math.cos(fromLat * Math.PI / 180);
+    const dLat = toLat - fromLat;
+    const angle = Math.atan2(dLon, dLat) * 180 / Math.PI;
+    if (angle < -157.5 || angle >= 157.5) return '北';
+    if (angle >= -157.5 && angle < -112.5) return '东北';
+    if (angle >= -112.5 && angle < -67.5) return '东';
+    if (angle >= -67.5 && angle < -22.5) return '东南';
+    if (angle >= -22.5 && angle < 22.5) return '南';
+    if (angle >= 22.5 && angle < 67.5) return '西南';
+    if (angle >= 67.5 && angle < 112.5) return '西';
+    return '西北';
+}
+
+function estimateWalkTime(distMeters) {
+    const mins = Math.round(distMeters / 83.33);
+    return mins < 1 ? '<1分钟' : `${mins}分钟`;
+}
+
+function updateCircleInfo(latlng) {
+    const summaryDiv = document.getElementById('circle-summary');
+    const listDiv = document.getElementById('poi-list');
+    const innerDiv = document.getElementById('poi-list-inner');
+    if (!summaryDiv || !listDiv || !innerDiv) return;
+
+    // 过滤器芯片
+    const filterDiv = document.getElementById('poi-filters');
+    if (filterDiv) filterDiv.style.display = 'block';
+    const chipsDiv = document.getElementById('filter-chips');
+    if (chipsDiv) {
+        const ftList = ['school', 'hospital', 'park', 'market', 'metro', 'bus'];
+        chipsDiv.innerHTML = ftList.map(ft => {
+            const active = activeFilters.has(ft);
+            const color = FACILITY_COLORS_JS[ft] || '#888';
+            return `<span onclick="toggleFilter('${ft}', this)" style="
+                display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;cursor:pointer;
+                background:${active ? color + '33' : '#21262d'};
+                color:${active ? color : '#8b949e'};
+                border:1px solid ${active ? color : '#30363d'};
+                user-select:none;
+            ">${FACILITY_NAMES_JS[ft] || ft}</span>`;
+        }).join('');
+    }
+
+    // Haversine 精确距离
+    const toRad = d => d * Math.PI / 180;
+    const lat1 = toRad(latlng.lat), lng1 = toRad(latlng.lng);
+
+    const inPOIs = [];
+    poi.forEach(f => {
+        const [lon, lat] = f.geometry.coordinates;
+        const lat2 = toRad(lat), lng2 = toRad(lon);
+        const dLat = lat2 - lat1, dLon = lng2 - lng1;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+        const dist = 2 * 6371000 * Math.asin(Math.sqrt(a));
+        if (dist <= walkCircleRadius) {
+            inPOIs.push({ f, dist });
+        }
+    });
+
+    const counts = { school: 0, hospital: 0, park: 0, market: 0, metro: 0, bus: 0 };
+    inPOIs.forEach(({ f }) => {
+        const ft = f.properties.facility_type;
+        if (counts[ft] !== undefined) counts[ft]++;
+    });
+    const total = inPOIs.length;
+
+    summaryDiv.style.display = 'block';
+    const countRows = Object.entries(counts)
+        .filter(([, v]) => v > 0)
+        .map(([ft, cnt]) => {
+            const c = FACILITY_COLORS_JS[ft] || '#888';
+            return `<span style="color:${c};white-space:nowrap;margin-right:6px;">${FACILITY_NAMES_JS[ft]||ft}: <b>${cnt}</b>个</span>`;
+        }).join('');
+    document.getElementById('circle-total').innerHTML =
+        `<b>${(walkCircleRadius/1000).toFixed(1)}km</b> 圈内共 <b>${total}</b> 个设施: ${countRows || '无'}`;
+
+    listDiv.style.display = 'block';
+    const filtered = inPOIs.filter(({ f }) => activeFilters.has(f.properties.facility_type));
+
+    if (filtered.length === 0) {
+        innerDiv.innerHTML = `<div style="padding:16px;text-align:center;color:#8b949e;font-size:12px;">筛选后无设施</div>`;
+        return;
+    }
+
+    filtered.sort((a, b) => a.dist - b.dist);
+    const display = filtered.slice(0, 50);
+
+    innerDiv.innerHTML = display.map(({ f, dist }) => {
+        const p = f.properties;
+        const ft = p.facility_type || '';
+        const color = FACILITY_COLORS_JS[ft] || '#888';
+        const dir = getDirection(latlng.lat, latlng.lng, f.geometry.coordinates[1], f.geometry.coordinates[0]);
+        const walkTime = estimateWalkTime(dist);
+        const name = (p.name || '未知设施').replace(/'/g, "\'");
+        const addr = p.addr || '';
+        const ftCn = FACILITY_NAMES_JS[ft] || ft;
+        const distStr = dist < 1000 ? dist.toFixed(0) + 'm' : (dist/1000).toFixed(1) + 'km';
+
+        return `<div class="poi-list-item" onclick="setDestFromPoi(${f.geometry.coordinates[1]}, ${f.geometry.coordinates[0]}, '${name}', '${ft}')">
+            <div class="poi-list-row1">
+                <span class="poi-dot" style="background:${color}"></span>
+                <span class="poi-name">${p.name || '未知设施'}</span>
+                <span class="poi-dist" style="color:${color}">${distStr}</span>
+            </div>
+            <div class="poi-list-row2">
+                <span class="poi-tag" style="background:${color}22;color:${color};border:1px solid ${color}44">${ftCn}</span>
+                <span class="poi-dir">↗ ${dir}</span>
+                <span class="poi-walk">${walkTime}</span>
+            </div>
+            ${addr ? `<div class="poi-addr">${addr}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    if (filtered.length > 50) {
+        innerDiv.innerHTML += `<div style="padding:8px;text-align:center;color:#8b949e;font-size:11px;">还有 ${filtered.length - 50} 个设施，点击列表项可定位</div>`;
+    }
+}
+
+function toggleFilter(ft, el) {
+    if (activeFilters.has(ft)) {
+        activeFilters.delete(ft);
+    } else {
+        activeFilters.add(ft);
+    }
+    if (clickedLatLng) updateCircleInfo(clickedLatLng);
+}
+
+function panToPOI(lat, lng, name) {
+    map.setView([lat, lng], 17);
+    if (walkCircleMarker) walkCircleMarker.setLatLng([lat, lng]);
+}
+
+function clearWalkCircle() {
+    if (walkCircleLayer) { map.removeLayer(walkCircleLayer); walkCircleLayer = null; }
+    if (walkCircleMarker) { map.removeLayer(walkCircleMarker); walkCircleMarker = null; }
+    const summaryDiv = document.getElementById('circle-summary');
+    const listDiv = document.getElementById('poi-list');
+    const filterDiv = document.getElementById('poi-filters');
+    if (summaryDiv) summaryDiv.style.display = 'none';
+    if (listDiv) listDiv.style.display = 'none';
+    if (filterDiv) filterDiv.style.display = 'none';
+    clickedLatLng = null;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   路由分析 JS（对接 FastAPI 后端 / network.js）
+   ═══════════════════════════════════════════════════════════════ */
+
+const ROUTING_API_BASE = window.location.protocol === 'file:'
+    ? 'http://127.0.0.1:8765/api'
+    : window.location.origin + '/api';
+let routeStart = null;
+let routeEnd = null;
+let isochroneLayer = null;
+let routePolyline = null;
+let routeStartMarker = null;
+let routeEndMarker = null;
+let isochroneTimeMin = 10;
+let destFacilityType = 'school';
+let isochroneVisible = true;
+let routeVisible = true;
+let closestFacilitiesLayer = null;  // 最近设施图层
+
+function selectDestination(type) {
+    destFacilityType = type;
+    // 高亮选中按钮
+    document.querySelectorAll('.ctrl-btn-sm').forEach(function(b) {
+        b.classList.remove('active');
+    });
+    // 找到对应按钮并高亮
+    var btns = document.querySelectorAll('.ctrl-btn-sm');
+    var targetMap = {school:0, hospital:1, park:2, market:3, transit:4, restaurant:5, shopping:6, bank:7};
+    var idx = targetMap[type];
+    if (idx !== undefined && btns[idx]) btns[idx].classList.add('active');
+}
+function setIsochrone(mins) {
+    isochroneTimeMin = mins;
+    document.querySelectorAll('[id^="iso-btn-"]').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('iso-btn-' + mins);
+    if (btn) btn.classList.add('active');
+}
+function toggleIsochrone() {
+    isochroneVisible = document.getElementById('toggle-isochrone').checked;
+    if (isochroneLayer) {
+        isochroneLayer.eachLayer(function(l) {
+            var op = isochroneVisible ? 0.5 : 0;
+            if (l.setOpacity) l.setOpacity(op);
+        });
+    }
+}
+function toggleRoute() {
+    routeVisible = document.getElementById('toggle-route').checked;
+    if (routePolyline) routePolyline.setStyle({ opacity: routeVisible ? 0.9 : 0 });
+}
+map.on('click', function(e) {
+    if (routeEnd) { clearAllRoute(); }
+    routeStart = { lon: e.latlng.lng, lat: e.latlng.lat, node_id: null };
+    updateRouteUI();
+    if (routeStartMarker) map.removeLayer(routeStartMarker);
+    routeStartMarker = L.circleMarker([e.latlng.lat, e.latlng.lng], {
+        radius: 7, color: '#58a6ff', fillColor: '#fff', fillOpacity: 1, weight: 2,
+    }).addTo(map);
+    fetchSnappedNode(e.latlng.lng, e.latlng.lat);
+    // 自动查找最近 destFacilityType 设施并设为终点
+    fetchClosestFacilityOfType(e.latlng.lng, e.latlng.lat, destFacilityType);
+});
+function fetchSnappedNode(lon, lat) {
+    fetch(ROUTING_API_BASE + '/snap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lon: lon, lat: lat })
+    }).then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.node_id !== undefined) {
+            routeStart.node_id = data.node_id;
+            routeStart.lon = data.lon;
+            routeStart.lat = data.lat;
+        }
+    }).catch(function() {});
+}
+function fetchClosestFacilityOfType(lon, lat, ftype) {
+    fetch(ROUTING_API_BASE + '/closest-facilities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lon: lon, lat: lat, n_per_type: 1 })
+    }).then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.facilities && data.facilities.length > 0) {
+            // 过滤同类型最近设施
+            var match = data.facilities.find(function(f) { return f.facility_type === ftype; });
+            if (!match && data.facilities.length > 0) match = data.facilities[0];
+            if (match) {
+                // 清除旧的最近设施标注
+                if (closestFacilitiesLayer) { map.removeLayer(closestFacilitiesLayer); closestFacilitiesLayer = null; }
+                // 标注最近设施
+                closestFacilitiesLayer = L.layerGroup();
+                L.circleMarker([match.lat, match.lon], {
+                    radius: 8, color: FACILITY_COLORS_JS[ftype] || '#f0883e',
+                    fillColor: '#fff', fillOpacity: 0.8, weight: 2,
+                }).bindPopup('<b>' + (match.name || '设施') + '</b><br>' +
+                    '步行约 <b>' + (match.walk_time_s / 60).toFixed(1) + '分钟</b><br>' +
+                    '约 <b>' + (match.distance_m || 0).toFixed(0) + '米</b><br>' +
+                    '<button onclick="confirmRouteDestination()" style="margin-top:4px;padding:2px 8px;cursor:pointer;">设为终点</button>'
+                ).addTo(closestFacilitiesLayer).openPopup();
+                closestFacilitiesLayer.addTo(map);
+                // 自动设为终点并规划路线
+                routeEnd = {
+                    lon: match.lon, lat: match.lat,
+                    name: match.name || '设施',
+                    facility_type: match.facility_type || ftype,
+                    walk_time_s: match.walk_time_s
+                };
+                if (routeEndMarker) map.removeLayer(routeEndMarker);
+                routeEndMarker = L.circleMarker([match.lat, match.lon], {
+                    radius: 7, color: FACILITY_COLORS_JS[match.facility_type] || '#f0883e',
+                    fillColor: '#fff', fillOpacity: 1, weight: 2,
+                }).addTo(map);
+                updateRouteUI();
+                planRoute();
+            }
+        }
+    }).catch(function() {});
+}
+function confirmRouteDestination() {
+    if (closestFacilitiesLayer) closestFacilitiesLayer.closeAll();
+}
+function setDestFromPoi(lat, lng, name, ft) {
+    routeEnd = { lon: lng, lat: lat, name: name, facility_type: ft || destFacilityType };
+    if (routeEndMarker) map.removeLayer(routeEndMarker);
+    routeEndMarker = L.circleMarker([lat, lng], {
+        radius: 7, color: FACILITY_COLORS_JS[ft] || '#f0883e',
+        fillColor: '#fff', fillOpacity: 1, weight: 2,
+    }).addTo(map);
+    updateRouteUI();
+    if (routeStart) planRoute();
+}
+function updateRouteUI() {
+    var fromEl = document.getElementById('route-from');
+    var toEl = document.getElementById('route-to');
+    if (!fromEl || !toEl) return;
+    if (routeStart) {
+        fromEl.innerHTML = '<span style="color:#58a6ff">📍 ' + routeStart.lat.toFixed(5) + ', ' + routeStart.lon.toFixed(5) + '</span>';
+    } else {
+        fromEl.innerHTML = '<span style="color:#6e7681">点击地图选择起点</span>';
+    }
+    if (routeEnd) {
+        var ftColor = FACILITY_COLORS_JS[routeEnd.facility_type] || '#f0883e';
+        var timeStr = routeEnd.walk_time_s ? ('<span style="color:#58a6ff;font-size:10px"> · ' + (routeEnd.walk_time_s / 60).toFixed(1) + '分钟</span>') : '';
+        var nameStr = routeEnd.name ? routeEnd.name : '终点';
+        var ftName = FACILITY_NAMES_JS[routeEnd.facility_type] || routeEnd.facility_type || '';
+        toEl.innerHTML = '<span style="color:' + ftColor + '">🏁 </span>' + nameStr + ' <span style="color:#6e7681;font-size:10px">(' + ftName + ')' + timeStr + '</span>';
+    } else {
+        toEl.innerHTML = '<span style="color:#6e7681">点击地图选终点(当前:' + (FACILITY_NAMES_JS[destFacilityType] || destFacilityType) + ')</span>';
+    }
+}
+async function planRoute() {
+    if (!routeStart || !routeEnd) { return; }
+    var loading = document.getElementById('route-loading');
+    var result = document.getElementById('route-result');
+    if (loading) loading.style.display = 'block';
+    if (result) result.style.display = 'none';
+    // 已有等时估算时间则立即显示
+    if (routeEnd.walk_time_s && !routePolyline) {
+        var headerEl = document.getElementById('route-result-header');
+        var bodyEl = document.getElementById('route-result-body');
+        if (headerEl) headerEl.innerHTML = '🚶 <b>' + (routeEnd.walk_time_s / 60).toFixed(1) + '分钟</b> <span style="color:#58a6ff;font-size:10px">(最近' + (FACILITY_NAMES_JS[routeEnd.facility_type] || routeEnd.facility_type) + ')</span> <span style="color:#6e7681">' + (routeEnd.name || '') + '</span>';
+        if (bodyEl) bodyEl.innerHTML = '<div style="color:#8b949e;font-size:11px;padding:4px 0;">正在计算精确路线...</div>';
+        if (result) result.style.display = 'block';
+    }
+    try {
+        var resp = await fetch(ROUTING_API_BASE + '/route', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                from_lon: routeStart.lon, from_lat: routeStart.lat,
+                to_lon: routeEnd.lon, to_lat: routeEnd.lat
+            })
+        });
+        var data = await resp.json();
+        if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
+        if (data.geometry && data.geometry.length > 1) {
+            var latlngs = data.geometry.map(function(c) { return [c[1], c[0]]; });
+            routePolyline = L.polyline(latlngs, {
+                color: '#58a6ff', weight: 5, opacity: routeVisible ? 0.9 : 0,
+                lineCap: 'round', lineJoin: 'round',
+            }).addTo(map);
+            map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+        }
+        var timeMin = (data.total_time_s / 60).toFixed(1);
+        var distKm = (data.total_distance_m / 1000).toFixed(2);
+        var headerEl = document.getElementById('route-result-header');
+        var bodyEl = document.getElementById('route-result-body');
+        if (headerEl) headerEl.innerHTML = '🚶 <b>' + timeMin + '分钟</b>  ' + distKm + 'km  <span style="color:#58a6ff;font-size:10px">' + (FACILITY_NAMES_JS[routeEnd.facility_type] || routeEnd.facility_type || '') + '</span>  <span style="color:#6e7681">' + (routeEnd.name || '') + '</span>';
+        if (bodyEl && data.steps && data.steps.length > 0) {
+            bodyEl.innerHTML = data.steps.map(function(s) {
+                var roadLabel = s.instruction || s.fclass || '路段';
+                var timeMin = (s.time_s / 60).toFixed(1);
+                var distM = s.length_m >= 1000 ? (s.length_m / 1000).toFixed(2) + 'km' : s.length_m.toFixed(0) + 'm';
+                return '<div class="route-result-step"><span class="route-step-icon">🛤️</span><div class="route-step-info"><div class="route-step-name">' + roadLabel + '</div><div class="route-step-meta">' + timeMin + '分钟 · ' + distM + '</div></div></div>';
+            }).join('');
+        } else if (bodyEl) {
+            bodyEl.innerHTML = '<div style="color:#8b949e;font-size:11px;padding:4px 0;">路线几何获取中...</div>';
+        }
+        if (result) result.style.display = 'block';
+    } catch(e) {
+        fallbackRouteResult();
+    } finally {
+        if (loading) loading.style.display = 'none';
+    }
+}
+function fallbackRouteResult() {
+    if (!routeEnd || !routeStart) return;
+    var distM = getHaversineDistance(routeStart.lat, routeStart.lon, routeEnd.lat, routeEnd.lon);
+    var timeMin = Math.round(distM / 83.33 / 60);
+    var km = (distM / 1000).toFixed(2);
+    var headerEl = document.getElementById('route-result-header');
+    var bodyEl = document.getElementById('route-result-body');
+    if (headerEl) headerEl.innerHTML = '🚶 <b>~' + timeMin + '分钟</b> <span style="color:#f0883e;font-size:10px">(直线估算)</span>  ' + km + 'km  <span style="color:#6e7681">' + (routeEnd.name || '') + '</span>';
+    if (bodyEl) bodyEl.innerHTML = '<div style="color:#8b949e;font-size:11px;padding:8px 0;">💡 启动后端获取精确路线：<br><code style="font-size:10px;background:#161b22;padding:2px 4px;border-radius:3px;">uvicorn routing_api:app --host 0.0.0.0 --port 8765</code></div>';
+    var result = document.getElementById('route-result');
+    if (result) result.style.display = 'block';
+}
+async function computeIsochrone() {
+    if (!routeStart) { alert('请先在地图上点击设置起点'); return; }
+    var loading = document.getElementById('route-loading');
+    if (loading) loading.style.display = 'block';
+    try {
+        var resp = await fetch(ROUTING_API_BASE + '/service-area', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lon: routeStart.lon, lat: routeStart.lat, time_min: isochroneTimeMin })
+        });
+        var data = await resp.json();
+        if (isochroneLayer) { map.removeLayer(isochroneLayer); isochroneLayer = null; }
+        isochroneLayer = L.layerGroup();
+        var timeColor = isochroneTimeMin <= 10 ? '#2ea043' : isochroneTimeMin <= 15 ? '#f0883e' : '#da3633';
+        if (data.polygon && data.polygon.length >= 3) {
+            var latlngs = data.polygon.map(function(c) { return [c[1], c[0]]; });
+            L.polygon(latlngs, {
+                color: timeColor, weight: 2,
+                opacity: isochroneVisible ? 0.6 : 0,
+                fillColor: timeColor,
+                fillOpacity: isochroneVisible ? 0.12 : 0,
+                dashArray: '6 3',
+            }).addTo(isochroneLayer);
+        }
+        if (data.reachable_edges) {
+            data.reachable_edges.forEach(function(edge) {
+                var from = data.node_coords ? data.node_coords[edge.u] : null;
+                var to = data.node_coords ? data.node_coords[edge.v] : null;
+                if (from && to) {
+                    L.polyline([[from[1], from[0]], [to[1], to[0]]], {
+                        color: timeColor, weight: 3,
+                        opacity: isochroneVisible ? 0.4 : 0, fillOpacity: 0,
+                    }).addTo(isochroneLayer);
+                }
+            });
+        }
+        isochroneLayer.addTo(map);
+        var areaKm2 = data.reachable_area_km2 ? data.reachable_area_km2.toFixed(2) : '—';
+        var headerEl = document.getElementById('route-result-header');
+        var bodyEl = document.getElementById('route-result-body');
+        if (headerEl) headerEl.innerHTML = '🕐 <b>' + isochroneTimeMin + '分钟步行等时圈</b>  可达节点: <b>' + (data.reachable_nodes || 0) + '</b>  覆盖: <b>' + areaKm2 + 'km²</b>';
+        if (bodyEl) bodyEl.innerHTML = (data.reachable_edges ? '路网边: <b>' + data.reachable_edges.length + '</b> 条' : '') + '<br><span style="color:#6e7681">凸包多边形为可达范围近似</span>';
+        var result = document.getElementById('route-result');
+        if (result) result.style.display = 'block';
+    } catch(e) {
+        fallbackIsochroneResult();
+    } finally {
+        if (loading) loading.style.display = 'none';
+    }
+}
+function fallbackIsochroneResult() {
+    if (!routeStart) return;
+    var radiusM = isochroneTimeMin * 60 * 1.388;
+    if (isochroneLayer) { map.removeLayer(isochroneLayer); isochroneLayer = null; }
+    var timeColor = isochroneTimeMin <= 10 ? '#2ea043' : isochroneTimeMin <= 15 ? '#f0883e' : '#da3633';
+    isochroneLayer = L.circle([routeStart.lat, routeStart.lon], {
+        radius: radiusM, color: timeColor, weight: 2,
+        opacity: isochroneVisible ? 0.6 : 0,
+        fillColor: timeColor, fillOpacity: isochroneVisible ? 0.1 : 0,
+        dashArray: '6 3',
+    }).addTo(map);
+    var headerEl = document.getElementById('route-result-header');
+    var bodyEl = document.getElementById('route-result-body');
+    if (headerEl) headerEl.innerHTML = '🕐 <b>' + isochroneTimeMin + '分钟等时圈</b> <span style="color:#f0883e;font-size:10px">(直线估算)</span>  半径约 <b>' + (radiusM/1000).toFixed(1) + 'km</b>';
+    if (bodyEl) bodyEl.innerHTML = '<div style="color:#8b949e;font-size:11px;">💡 启动后端获取真实路网等时圈：<br><code style="font-size:10px;background:#161b22;padding:2px 4px;border-radius:3px;">uvicorn routing_api:app --host 0.0.0.0 --port 8765</code></div>';
+    var result = document.getElementById('route-result');
+    if (result) result.style.display = 'block';
+}
+function clearAllRoute() {
+    if (isochroneLayer) { map.removeLayer(isochroneLayer); isochroneLayer = null; }
+    if (routePolyline) { map.removeLayer(routePolyline); routePolyline = null; }
+    if (routeStartMarker) { map.removeLayer(routeStartMarker); routeStartMarker = null; }
+    if (routeEndMarker) { map.removeLayer(routeEndMarker); routeEndMarker = null; }
+    if (closestFacilitiesLayer) { map.removeLayer(closestFacilitiesLayer); closestFacilitiesLayer = null; }
+    routeStart = null;
+    routeEnd = null;
+    updateRouteUI();
+    var result = document.getElementById('route-result');
+    if (result) result.style.display = 'none';
+}
+function getHaversineDistance(lat1, lon1, lat2, lon2) {
+    var R = 6371000;
+    var t1 = lat1 * Math.PI / 180, t2 = lat2 * Math.PI / 180;
+    var dt = (lat2 - lat1) * Math.PI / 180;
+    var dl = (lon2 - lon1) * Math.PI / 180;
+    var a = Math.sin(dt/2) * Math.sin(dt/2) + Math.cos(t1) * Math.cos(t2) * Math.sin(dl/2) * Math.sin(dl/2);
+    return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+loadBaseThenTraj();
+</script>
+
+<style>
+/* POI 列表项 */
+.poi-list-item {
+    padding: 8px 10px;
+    border-bottom: 1px solid #21262d;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.poi-list-item:last-child { border-bottom: none; }
+.poi-list-item:hover { background: #21262d; }
+.poi-list-item:active { background: #30363d; }
+
+.poi-list-row1 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+}
+.poi-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.poi-name {
+    font-size: 12px;
+    color: #e6edf3;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.poi-dist {
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.poi-list-row2 {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+.poi-tag {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 8px;
+}
+.poi-dir {
+    font-size: 10px;
+    color: #8b949e;
+}
+.poi-walk {
+    font-size: 10px;
+    color: #8b949e;
+}
+.poi-addr {
+    font-size: 10px;
+    color: #6e7681;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 滚动条 */
+#poi-list::-webkit-scrollbar { width: 4px; }
+#poi-list::-webkit-scrollbar-track { background: #161b22; }
+#poi-list::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
+
+.leaflet-tooltip-dark {
+    background: rgba(22,27,34,0.95);
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    font-size: 12px;
+    border-radius: 6px;
+    padding: 8px 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.leaflet-tooltip-dark::before { display: none; }
+
+/* ── 路由分析 ─────────────────────────────────────────────── */
+#route-result { font-size: 11px; }
+.route-result-step {
+    padding: 5px 0;
+    border-bottom: 1px solid #21262d;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+.route-result-step:last-child { border-bottom: none; }
+.route-step-icon { font-size: 14px; flex-shrink: 0; }
+.route-step-info { flex: 1; }
+.route-step-name { color: #e6edf3; font-size: 11px; }
+.route-step-meta { font-size: 10px; color: #6e7681; margin-top: 1px; }
+.isochrone-poly { opacity: 0.25; weight: 2; }
+/* ============================================================ */
+/* 3D VIEWER MODAL */
+/* ============================================================ */
+#three-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #0d1117;
+    z-index: 9999;
+    flex-direction: column;
+}
+#three-modal.open {
+    display: flex;
+}
+#three-header {
+    background: linear-gradient(135deg, #161b22, #1c2128);
+    border-bottom: 1px solid #30363d;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    z-index: 10001;
+}
+#three-header h2 {
+    font-size: 15px;
+    font-weight: 600;
+    background: linear-gradient(90deg, #58a6ff, #a371f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+#three-close-btn {
+    background: #21262d;
+    color: #e6edf3;
+    border: 1px solid #30363d;
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+#three-close-btn:hover { background: #30363d; }
+#three-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+#three-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+#three-ui {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 10002;
+    pointer-events: none;
+}
+#three-ui > * { pointer-events: auto; }
+.three-panel {
+    background: rgba(22, 27, 34, 0.93);
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-width: 160px;
+    backdrop-filter: blur(8px);
+}
+.three-panel-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 7px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #21262d;
+}
+.three-layer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+    font-size: 12px;
+    color: #c9d1d9;
+    cursor: pointer;
+}
+.three-layer-row:hover { color: #fff; }
+.three-layer-row input[type="checkbox"] { cursor: pointer; accent-color: #58a6ff; }
+.three-view-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.three-view-btn {
+    background: #21262d;
+    color: #8b949e;
+    border: 1px solid #30363d;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    text-align: center;
+    transition: all 0.15s;
+}
+.three-view-btn:hover { background: #30363d; color: #c9d1d9; }
+.three-view-btn.active {
+    background: #1f6feb;
+    color: #fff;
+    border-color: #388bfd;
+}
+.three-stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #8b949e;
+    margin: 3px 0;
+}
+.three-stat-value { color: #c9d1d9; font-weight: 600; }
+#three-hint {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(22, 27, 34, 0.9);
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-size: 11px;
+    color: #8b949e;
+    pointer-events: none;
+    z-index: 10002;
+    backdrop-filter: blur(8px);
+}
+</style>
+</body>
+<!-- ============================================================ -->
+<!-- 3D VIEWER MODAL -->
+<!-- ============================================================ -->
+<div id="three-modal">
+    <div id="three-header">
+        <h2>南山区 3D 体素街景</h2>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <span id="three-pos" style="font-size:12px;color:#8b949e;"></span>
+            <button id="three-close-btn" onclick="close3DViewer()">关闭</button>
+        </div>
+    </div>
+    <div id="three-container">
+        <canvas id="three-canvas"></canvas>
+        <div id="three-ui">
+            <div class="three-panel">
+                <div class="three-panel-title">视图模式</div>
+                <div class="three-view-btns">
+                    <button class="three-view-btn" id="tv-map2d" onclick="threeSetView('map2d')">Map 底图</button>
+                    <button class="three-view-btn active" id="tv-3d" onclick="threeSetView('3d')">3D 体素</button>
+                    <button class="three-view-btn" id="tv-bev" onclick="threeSetView('bev')">BEV 俯视</button>
+                    <button class="three-view-btn" id="tv-side" onclick="threeSetView('side')">侧视图</button>
+                </div>
+            </div>
+            <div class="three-panel">
+                <div class="three-panel-title">图层</div>
+                <label class="three-layer-row">
+                    <input type="checkbox" id="tl-voxel" checked onchange="threeToggle('voxel', this.checked)">
+                    体素
+                </label>
+                <label class="three-layer-row">
+                    <input type="checkbox" id="tl-buildings" checked onchange="threeToggle('buildings', this.checked)">
+                    白模建筑
+                </label>
+                <label class="three-layer-row">
+                    <input type="checkbox" id="tl-roads" checked onchange="threeToggle('roads', this.checked)">
+                    路网
+                </label>
+                <label class="three-layer-row">
+                    <input type="checkbox" id="tl-flow" checked onchange="threeToggle('flow', this.checked)">
+                    流量场
+                </label>
+                <label class="three-layer-row">
+                    <input type="checkbox" id="tl-obstacles" checked onchange="threeToggle('obstacles', this.checked)">
+                    障碍物
+                </label>
+            </div>
+            <div class="three-panel">
+                <div class="three-panel-title">体素高度层</div>
+                <div id="three-layer-btns">
+                    <button class="three-view-btn" id="tl-0" onclick="threeSetLayer(0)">地面 0-2m</button>
+                    <button class="three-view-btn active" id="tl-1" onclick="threeSetLayer(1)">行人 2-5m</button>
+                    <button class="three-view-btn" id="tl-2" onclick="threeSetLayer(2)">车辆 5-10m</button>
+                    <button class="three-view-btn" id="tl-3" onclick="threeSetLayer(3)">树冠 10-20m</button>
+                    <button class="three-view-btn" id="tl-4" onclick="threeSetLayer(4)">全部</button>
+                </div>
+            </div>
+            <div class="three-panel">
+                <div class="three-panel-title">统计</div>
+                <div id="three-stats"></div>
+            </div>
+        </div>
+        <div id="three-hint">拖拽旋转 · 滚轮缩放 · 点击建筑查看信息</div>
+    </div>
+</div>
+<!-- Three.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+<!-- 3D Viewer Logic -->
+<script>
+(function() {
+    'use strict';
+
+    /* ================================================================
+       EMBEDDED WORLD DATA (same as tesla_world_3d.html)
+    ================================================================ */
+    var WORLD_DATA = null; // loaded asynchronously
+
+    /* ================================================================
+       THREE.JS SCENE GLOBALS
+    ================================================================ */
+    var renderer, scene, camera, controls;
+    var voxelG, roadG, flowG, bldG, obstG, map2dG, gridG;
+    var currentView = '3d';
+    var currentLayer = 1; // 0=ground,1=ped,2=veh,3=can,4=all
+    var layerVisible = { voxel:true, buildings:true, roads:true, flow:true, obstacles:true };
+    var SCALE_FACTOR = 10000;
+    var cellOrigin = [113.883, 22.479];
+    var worldBounds = [113.883, 22.479, 113.994, 22.593];
+    var GRID_RES = 0.003;
+
+    /* ================================================================
+       LAYER COLOR MAPS
+    ================================================================ */
+    var LAYER_COLORS = [
+        '#2d8a5e','#4fc3f7','#ff7043','#66bb6a','#ce93d8'
+    ];
+    var LAYER_NAMES  = ['地面','行人','车辆','树冠','全部'];
+
+    var LAYER_H = [
+        { base:0,  top:2  },
+        { base:2,  top:5  },
+        { base:5,  top:10 },
+        { base:10, top:20 },
+        { base:0,  top:20 }
+    ];
+
+    function getOccColor(occ, layer) {
+        if (occ === undefined || occ === null || occ < 0.01) return null;
+        var h = 120 - occ * 130;
+        var s = 55 + layer * 8;
+        var l = 28 + occ * 22;
+        return 'hsl(' + h.toFixed(0) + ',' + s.toFixed(0) + '%,' + l.toFixed(0) + '%)';
+    }
+
+    function lngLatToWorld(lng, lat) {
+        return {
+            x: (lng - cellOrigin[0]) * SCALE_FACTOR,
+            z: (lat - cellOrigin[1]) * SCALE_FACTOR
+        };
+    }
+
+    /* ================================================================
+       INIT THREE.JS
+    ================================================================ */
+    function initThree() {
+        var canvas = document.getElementById('three-canvas');
+        var container = document.getElementById('three-container');
+        renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.shadowMap.enabled = false;
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0d1117);
+        scene.fog = new THREE.FogExp2(0x0d1117, 0.004);
+
+        var w = renderer.domElement.width, h = renderer.domElement.height;
+        camera = new THREE.PerspectiveCamera(55, w / h, 0.5, 3000);
+        camera.position.set(80, 60, 80);
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.target.set(40, 0, 40);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.07;
+        controls.minDistance = 10;
+        controls.maxDistance = 500;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+        // Lights
+        scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+        var sun = new THREE.DirectionalLight(0xffeedd, 1.2);
+        sun.position.set(80, 120, 60);
+        scene.add(sun);
+        var fill = new THREE.DirectionalLight(0x8899cc, 0.5);
+        fill.position.set(-40, 60, -30);
+        scene.add(fill);
+
+        // Groups
+        voxelG   = new THREE.Group();
+        roadG    = new THREE.Group();
+        flowG    = new THREE.Group();
+        bldG     = new THREE.Group();
+        obstG    = new THREE.Group();
+        map2dG   = new THREE.Group();
+        gridG    = new THREE.Group();
+        scene.add(voxelG, roadG, flowG, bldG, obstG, map2dG, gridG);
+
+        // Build world if data ready
+        if (WORLD_DATA) buildWorld(WORLD_DATA);
+    }
+
+    /* ================================================================
+       BUILD WORLD
+    ================================================================ */
+    function buildWorld(data) {
+        voxelG.clear(); roadG.clear(); flowG.clear(); bldG.clear(); obstG.clear(); map2dG.clear(); gridG.clear();
+
+        // Ground plane
+        var gw = (worldBounds[2] - worldBounds[0]) * SCALE_FACTOR;
+        var gh = (worldBounds[3] - worldBounds[1]) * SCALE_FACTOR;
+        var ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(gw + 10, gh + 10),
+            new THREE.MeshBasicMaterial({ color: 0x13171f })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.set(gw / 2, -0.2, gh / 2);
+        map2dG.add(ground);
+
+        buildVoxels(data);
+        buildRoads(data);
+        buildFlow(data);
+        buildBuildings(data);
+        buildObstacles(data);
+        buildMap2D(data);
+
+        updateStats(data);
+    }
+
+    /* ================================================================
+       VOXELS
+    ================================================================ */
+    function buildVoxels(data) {
+        if (!data.cells) return;
+        data.cells.forEach(function(cell) {
+            if (!cell.height_layers) return;
+            var wx = lngLatToWorld(cell.lng, cell.lat).x;
+            var wz = lngLatToWorld(cell.lng, cell.lat).z;
+            var res = GRID_RES * SCALE_FACTOR;
+            LAYER_H.forEach(function(lh, li) {
+                if (currentLayer !== 4 && currentLayer !== li) return;
+                var h = lh.top - lh.base;
+                var y = lh.base + h / 2;
+                var occ = cell.height_layers[li] || 0;
+                if (occ < 0.01) return;
+                var color = getOccColor(occ, li);
+                if (!color) return;
+                var geo = new THREE.BoxGeometry(res * 0.9, h * SCALE_FACTOR * 0.9, res * 0.9);
+                var mat = new THREE.MeshLambertMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.88 });
+                var mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(wx + res / 2, y * SCALE_FACTOR + h * SCALE_FACTOR / 2, wz + res / 2);
+                mesh.userData = { cell: cell, layer: li, occ: occ };
+                voxelG.add(mesh);
+            });
+        });
+    }
+
+    /* ================================================================
+       ROADS (use pre-computed wx/wz if available)
+    ================================================================ */
+    function buildRoads(data) {
+        if (!data.road_segments) return;
+        data.road_segments.forEach(function(seg) {
+            var sx, sz, ex, ez;
+            if (seg.ws !== undefined) {
+                sx = seg.ws; sz = seg.wz_s; ex = seg.we; ez = seg.wz_e;
+            } else {
+                var s = lngLatToWorld(seg.lng_start || 0, seg.lat_start || 0);
+                var e = lngLatToWorld(seg.lng_end || 0, seg.lat_end || 0);
+                sx = s.x; sz = s.z; ex = e.x; ez = e.z;
+            }
+            var pts = [
+                new THREE.Vector3(sx, 0.3, sz),
+                new THREE.Vector3(ex, 0.3, ez)
+            ];
+            var rc = seg.cls === 'primary' ? 0x4a90d9 :
+                     seg.cls === 'secondary' ? 0x5c9fe6 : 0x3d6a8a;
+            var mat = new THREE.LineBasicMaterial({ color: rc, transparent: true, opacity: 0.7 });
+            roadG.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
+        });
+    }
+
+    /* ================================================================
+       FLOW FIELD
+    ================================================================ */
+    function buildFlow(data) {
+        if (!data.cells) return;
+        var count = 0;
+        data.cells.forEach(function(cell) {
+            if (count++ > 6000) return;
+            var pf = cell.physical_flow;
+            if (!pf || pf.length < 2) return;
+            var wx = lngLatToWorld(cell.lng, cell.lat).x;
+            var wz = lngLatToWorld(cell.lng, cell.lat).z;
+            var dx = pf[0] || 0, dy = pf[1] || 0;
+            var len = Math.min(Math.sqrt(dx * dx + dy * dy), 3);
+            if (len < 0.05) return;
+            var angle = Math.atan2(dx, dy);
+            var intensity = Math.min(len / 3, 1);
+            var r = Math.floor(80 + intensity * 175);
+            var g = Math.floor(200 + intensity * 55);
+            var b = 255;
+            var mat = new THREE.LineBasicMaterial({
+                color: (r << 16) | (g << 8) | b,
+                transparent: true, opacity: 0.5 + intensity * 0.4
+            });
+            var pts = [
+                new THREE.Vector3(wx, 0.5, wz),
+                new THREE.Vector3(wx + Math.sin(angle) * len, 0.5, wz + Math.cos(angle) * len)
+            ];
+            flowG.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
+        });
+    }
+
+    /* ================================================================
+       BUILDINGS (WHITE MODEL)
+    ================================================================ */
+    function buildBuildings(data) {
+        if (!data.buildings) return;
+        data.buildings.forEach(function(b) {
+            var wx = b.wx !== undefined ? b.wx : lngLatToWorld(b.lng || b.lon, b.lat).x;
+            var wz = b.wz !== undefined ? b.wz : lngLatToWorld(b.lng || b.lon, b.lat).z;
+            var h = (b.h || b.height_m || 15);
+            var wScore = b.w || b.walkability || 5;
+            var wNorm = Math.max(0, Math.min(1, (wScore - 1) / 9));
+            var useName = (b.use || b.useName || '').toLowerCase();
+            var r, g, bl;
+            if (useName.includes('商业') || useName.includes('商服')) { r=220;g=180;bl=130; }
+            else if (useName.includes('住宅') || useName.includes('居住')) { r=200;g=190;bl=160; }
+            else if (useName.includes('办公') || useName.includes('研发')) { r=170;g=185;bl=210; }
+            else if (useName.includes('工业') || useName.includes('厂房')) { r=180;g=175;bl=175; }
+            else { r=Math.floor(170+wNorm*50); g=Math.floor(165+wNorm*45); bl=Math.floor(150+wNorm*60); }
+            var color = (r << 16) | (g << 8) | bl;
+            var mat = new THREE.MeshLambertMaterial({ color: color, transparent:true, opacity:0.82 });
+
+            if (b.poly && b.poly.length >= 3) {
+                var shape = new THREE.Shape();
+                var poly = b.poly;
+                shape.moveTo(poly[0][0], poly[0][1]);
+                poly.forEach(function(p) { shape.lineTo(p[0], p[1]); });
+                shape.closePath();
+                var geo = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false });
+                geo.rotateX(-Math.PI / 2);
+                var mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(wx, 0.1, wz);
+                bldG.add(mesh);
+            } else {
+                var size = Math.sqrt(b.a || b.area || 100) * 0.3;
+                var mesh = new THREE.Mesh(new THREE.BoxGeometry(size, h, size), mat);
+                mesh.position.set(wx, h / 2, wz);
+                bldG.add(mesh);
+            }
+        });
+    }
+
+    /* ================================================================
+       OBSTACLES
+    ================================================================ */
+    function buildObstacles(data) {
+        if (!data.obstacle_markers) return;
+        data.obstacle_markers.forEach(function(m) {
+            var wx = m.wx !== undefined ? m.wx : lngLatToWorld(m.lng, m.lat).x;
+            var wz = m.wz !== undefined ? m.wz : lngLatToWorld(m.lng, m.lat).z;
+            var geo = new THREE.ConeGeometry(1.2, 3, 6);
+            var mat = new THREE.MeshLambertMaterial({ color: 0xff3333, transparent: true, opacity: 0.85 });
+            var cone = new THREE.Mesh(geo, mat);
+            cone.position.set(wx, 1.5, wz);
+            obstG.add(cone);
+            var ring = new THREE.Mesh(
+                new THREE.RingGeometry(0.8, 2.2, 32),
+                new THREE.MeshBasicMaterial({ color: 0xff3333, transparent: true, opacity: 0.4, side: THREE.DoubleSide })
+            );
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.set(wx, 0.2, wz);
+            obstG.add(ring);
+        });
+    }
+
+    /* ================================================================
+       MAP2D (2D GIS OVERLAY IN 3D)
+    ================================================================ */
+    function buildMap2D(data) {
+        if (!data.cells) return;
+        var gw = (worldBounds[2] - worldBounds[0]) * SCALE_FACTOR;
+        var gh = (worldBounds[3] - worldBounds[1]) * SCALE_FACTOR;
+        var mat = new THREE.LineBasicMaterial({ color: 0x2d3748, transparent:true, opacity:0.5 });
+        data.cells.forEach(function(cell) {
+            var wx = lngLatToWorld(cell.lng, cell.lat).x;
+            var wz = lngLatToWorld(cell.lng, cell.lat).z;
+            var res = GRID_RES * SCALE_FACTOR;
+            var pts = [
+                new THREE.Vector3(wx, 0.02, wz),
+                new THREE.Vector3(wx+res, 0.02, wz),
+                new THREE.Vector3(wx+res, 0.02, wz+res),
+                new THREE.Vector3(wx, 0.02, wz+res),
+                new THREE.Vector3(wx, 0.02, wz)
+            ];
+            gridG.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
+        });
+    }
+
+    /* ================================================================
+       STATS
+    ================================================================ */
+    function updateStats(data) {
+        var nVox = voxelG.children.length;
+        var nBld = bldG.children.length;
+        var nRd  = roadG.children.length;
+        var nObs = obstG.children.length;
+        document.getElementById('three-stats').innerHTML =
+            '<div class="three-stat-row"><span>体素</span><span class="three-stat-value">' + nVox + '</span></div>' +
+            '<div class="three-stat-row"><span>建筑</span><span class="three-stat-value">' + nBld + '</span></div>' +
+            '<div class="three-stat-row"><span>道路</span><span class="three-stat-value">' + nRd + '</span></div>' +
+            '<div class="three-stat-row"><span>障碍物</span><span class="three-stat-value">' + nObs + '</span></div>';
+    }
+
+    /* ================================================================
+       TOGGLE LAYER VISIBILITY
+    ================================================================ */
+    function threeToggle(key, visible) {
+        layerVisible[key] = visible;
+        if (key === 'voxel')      voxelG.visible   = visible;
+        if (key === 'buildings')  bldG.visible    = visible;
+        if (key === 'roads')      roadG.visible   = visible;
+        if (key === 'flow')       flowG.visible   = visible;
+        if (key === 'obstacles')  obstG.visible   = visible;
+    }
+
+    /* ================================================================
+       LAYER SWITCH
+    ================================================================ */
+    function threeSetLayer(l) {
+        currentLayer = l;
+        document.querySelectorAll('#three-layer-btns .three-view-btn').forEach(function(b, i) {
+            b.classList.toggle('active', i === l);
+        });
+        voxelG.clear();
+        if (WORLD_DATA) buildVoxels(WORLD_DATA);
+    }
+
+    /* ================================================================
+       VIEW MODE SWITCH
+    ================================================================ */
+    function threeSetView(v) {
+        currentView = v;
+        var target = new THREE.Vector3(40, 0, 40);
+        var isMap2D = v === 'map2d';
+
+        voxelG.visible   = !isMap2D;
+        bldG.visible     = !isMap2D;
+        obstG.visible    = !isMap2D;
+        map2dG.visible  = isMap2D;
+        gridG.visible   = isMap2D;
+
+        document.querySelectorAll('.three-view-btn').forEach(function(b) { b.classList.remove('active'); });
+        var btn = document.getElementById('tv-' + v);
+        if (btn) btn.classList.add('active');
+
+        switch (v) {
+            case 'map2d':
+                camera.position.set(60, 150, 60);
+                controls.maxPolarAngle = 0.05;
+                break;
+            case '3d':
+                camera.position.set(80, 60, 80);
+                controls.maxPolarAngle = Math.PI / 2 - 0.05;
+                break;
+            case 'bev':
+                camera.position.set(target.x, 200, target.z + 0.1);
+                controls.maxPolarAngle = 0.01;
+                break;
+            case 'side':
+                camera.position.set(-50, 40, 40);
+                controls.maxPolarAngle = Math.PI / 2 - 0.05;
+                break;
+        }
+        camera.lookAt(target);
+        controls.target.copy(target);
+    }
+
+    /* ================================================================
+       OPEN / CLOSE
+    ================================================================ */
+    window.open3DViewer = function() {
+        var modal = document.getElementById('three-modal');
+        modal.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        if (!renderer) {
+            initThree();
+        }
+        renderer.setSize(
+            document.getElementById('three-container').clientWidth,
+            document.getElementById('three-container').clientHeight
+        );
+        threeSetView(currentView);
+        loadWorldData();
+    };
+
+    window.close3DViewer = function() {
+        document.getElementById('three-modal').classList.remove('open');
+        document.body.style.overflow = '';
+    };
+
+    /* ================================================================
+       LOAD WORLD DATA FROM MULTIPLE FILES
+    ================================================================ */
+    function loadWorldData() {
+        Promise.all([
+            fetch('./bev_voxel_3d.json').then(function(r) { return r.json(); }),
+            fetch('./roads_data.json').then(function(r) { return r.json(); }).catch(function() { return null; }),
+            fetch('./buildings_white_model.json').then(function(r) { return r.json(); }).catch(function() { return null; }),
+            fetch('./obstacle_markers.json').then(function(r) { return r.json(); }).catch(function() { return null; })
+        ]).then(function(results) {
+            var voxelData = results[0];
+            var roadsGeo  = results[1];
+            var bldGeo   = results[2];
+            var obstData = results[3];
+
+            // Use voxel data bounds/origin
+            var origin = voxelData.cellOrigin || voxelData.bounds || [113.884, 22.501];
+            cellOrigin[0] = origin[0]; cellOrigin[1] = origin[1];
+            worldBounds = voxelData.bounds || [113.883, 22.479, 113.994, 22.593];
+
+            // Normalize cells from voxel JSON
+            var merged = {
+                bounds: voxelData.bounds,
+                cellOrigin: voxelData.cellOrigin,
+                grid_res: voxelData.grid_resolution_deg,
+                cells: voxelData.cells || [],
+                road_segments: [],
+                buildings: [],
+                obstacle_markers: []
+            };
+
+            // Convert roads GeoJSON → road_segments (world coords)
+            var bnd = voxelData.bounds || [113.883, 22.479, 113.994, 22.593];
+            if (roadsGeo && roadsGeo.features) {
+                roadsGeo.features.forEach(function(f) {
+                    if (!f.geometry || f.geometry.type !== 'LineString') return;
+                    var coords = f.geometry.coordinates;
+                    if (coords.length < 2) return;
+                    // Filter: keep only roads whose start or end is within voxel bounds
+                    var s0 = coords[0][0], s1 = coords[0][1];
+                    var e0 = coords[coords.length-1][0], e1 = coords[coords.length-1][1];
+                    var inBounds = (
+                        (s0 >= bnd[0] && s0 <= bnd[2] && s1 >= bnd[1] && s1 <= bnd[3]) ||
+                        (e0 >= bnd[0] && e0 <= bnd[2] && e1 >= bnd[1] && e1 <= bnd[3])
+                    );
+                    if (!inBounds) return;
+                    var s = lngLatToWorld(s0, s1);
+                    var e = lngLatToWorld(e0, e1);
+                    var cls = f.properties.fclass || 'other';
+                    if (cls === 'primary' || cls === 'primary_link') cls = 'primary';
+                    else if (cls === 'secondary' || cls === 'tertiary') cls = 'secondary';
+                    merged.road_segments.push({
+                        ws: s.x, wz_s: s.z, we: e.x, wz_e: e.z,
+                        cls: cls, occ: 0.3, wm: 8
+                    });
+                });
+            }
+
+            // Convert buildings GeoJSON → buildings (world coords)
+            if (bldGeo && bldGeo.features) {
+                bldGeo.features.forEach(function(f) {
+                    if (!f.geometry) return;
+                    var p = f.properties || {};
+                    var h = p.height_m || 15;
+                    var wScore = p.walkability || 5;
+                    var use = p.use_name || '';
+                    var cx, cz;
+                    if (f.geometry.type === 'Polygon' && f.geometry.coordinates.length > 0) {
+                        var ring = f.geometry.coordinates[0];
+                        cx = ring.reduce(function(s, c) { return s + c[0]; }, 0) / ring.length;
+                        cz = ring.reduce(function(s, c) { return s + c[1]; }, 0) / ring.length;
+                    } else {
+                        cx = p.lon || 0; cz = p.lat || 0;
+                    }
+                    // Filter: building centroid must be within voxel bounds
+                    if (cx < bnd[0] || cx > bnd[2] || cz < bnd[1] || cz > bnd[3]) return;
+                    var wp = lngLatToWorld(cx, cz);
+                    var polyCoords = null;
+                    if (f.geometry.type === 'Polygon' && f.geometry.coordinates.length > 0) {
+                        polyCoords = f.geometry.coordinates[0].map(function(c) {
+                            var p2 = lngLatToWorld(c[0], c[1]);
+                            return [p2.x, p2.z];
+                        });
+                    }
+                    merged.buildings.push({
+                        wx: wp.x, wz: wp.z,
+                        h: h, use: use, w: wScore,
+                        poly: polyCoords
+                    });
+                });
+            }
+
+            // Use obstacle markers if available
+            if (obstData && Array.isArray(obstData)) {
+                obstData.forEach(function(m) {
+                    merged.obstacle_markers.push({
+                        wx: m.wx || 0, wz: m.wz || 0,
+                        occ: m.occ || 0.5, w: m.w || 5
+                    });
+                });
+            }
+
+            WORLD_DATA = merged;
+            if (renderer) buildWorld(merged);
+        }).catch(function(err) {
+            console.warn('3D 数据加载失败:', err);
+        });
+    }
+
+    /* ================================================================
+       ANIMATE LOOP
+    ================================================================ */
+    function animate() {
+        requestAnimationFrame(animate);
+        if (controls) controls.update();
+        if (renderer && scene && camera) renderer.render(scene, camera);
+    }
+    animate();
+
+    /* ================================================================
+       RESIZE
+    ================================================================ */
+    window.addEventListener('resize', function() {
+        if (!renderer) return;
+        var c = document.getElementById('three-container');
+        renderer.setSize(c.clientWidth, c.clientHeight);
+        camera.aspect = c.clientWidth / c.clientHeight;
+        camera.updateProjectionMatrix();
+    });
+
+    /* ================================================================
+       KEYBOARD SHORTCUTS
+    ================================================================ */
+    document.addEventListener('keydown', function(e) {
+        if (!document.getElementById('three-modal').classList.contains('open')) return;
+        switch (e.key) {
+            case 'Escape': close3DViewer(); break;
+            case 'm': case 'M': threeSetView('map2d'); break;
+            case 'v': case 'V': threeSetView('3d'); break;
+            case 'b': case 'B': threeSetView('bev'); break;
+            case 's': case 'S': threeSetView('side'); break;
+        }
+    });
+
+})();
+</script>
+</html>

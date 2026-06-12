@@ -61,3 +61,7 @@ streetview-analysis/city_twin_output/city_twin_viewer.html
 
 # RAR 压缩包（太大，不上传）
 *.rar
+
+# 临时缓存和杂项
+cache/
+commit_msg.txt

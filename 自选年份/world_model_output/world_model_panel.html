@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>世界模型对照验证 | 可达性幻觉分析</title>
+<style>
+:root {
+  --primary: #3B82F6;
+  --primary-dark: #2563EB;
+  --primary-light: #93C5FD;
+  --bg-base: #0F172A;
+  --bg-panel: #1E293B;
+  --bg-card: #334155;
+  --bg-hover: #475569;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --border: #334155;
+  --green: #22C55E;
+  --yellow: #EAB308;
+  --orange: #F97316;
+  --red: #EF4444;
+  --purple: #A855F7;
+  --cyan: #06B6D4;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#header {
+  background: linear-gradient(135deg, #161b22, #1c2128);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+#header h1 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#header h1 span { color: var(--primary); }
+#header .badge {
+  font-size: 11px;
+  background: var(--primary);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+#main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 14px;
+}
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.panel-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.panel-title::before {
+  content: '';
+  width: 3px;
+  height: 12px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+
+/* Hypothesis Score */
+#score-section { grid-column: 1; grid-row: 1; }
+#score-gauge {
+  position: relative;
+  width: 180px;
+  height: 90px;
+  margin: 0 auto 12px;
+}
+#score-gauge svg { width: 100%; height: 100%; }
+.gauge-bg { fill: none; stroke: var(--bg-card); stroke-width: 12; }
+#gauge-fill {
+  fill: none;
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1),
+              stroke 0.6s ease;
+}
+#score-value {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+#score-label {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.score-interpretation {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  text-align: center;
+  padding: 8px 4px;
+  background: var(--bg-card);
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+/* Metric Cards */
+#metrics-section { grid-column: 1; grid-row: 2; }
+.metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.metric-card {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+.metric-card .m-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.metric-card .m-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.metric-card .m-sub {
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.metric-card.highlight { border: 1px solid var(--primary); }
+.metric-card.highlight .m-value { color: var(--primary); }
+
+/* Occupancy Bars */
+#occupancy-section { grid-column: 1; grid-row: 3; }
+.occ-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.occ-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.occ-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  width: 50px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.occ-bar-wrap {
+  flex: 1;
+  height: 18px;
+  background: var(--bg-card);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+.occ-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  padding-left: 6px;
+}
+.occ-bar span {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+}
+.occ-value {
+  font-size: 11px;
+  font-weight: 600;
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.phys-bar { background: linear-gradient(90deg, var(--cyan), #0891B2); }
+.dig-bar { background: linear-gradient(90deg, var(--purple), #7E22CE); }
+
+.gap-indicator {
+  margin-top: 10px;
+  padding: 8px;
+  background: var(--bg-card);
+  border-radius: 6px;
+  text-align: center;
+}
+.gap-indicator .gap-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.gap-indicator .gap-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--yellow);
+}
+.gap-indicator .gap-sub {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+/* Grid Map */
+#map-section {
+  grid-column: 2;
+  grid-row: 1 / 4;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.map-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.map-tab {
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.map-tab:hover { background: var(--bg-card); color: var(--text-primary); }
+.map-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+#map-container {
+  flex: 1;
+  background: var(--bg-card);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  min-height: 300px;
+}
+#map-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.map-legend {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(15,23,42,0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 3px;
+}
+.legend-item:last-child { margin-bottom: 0; }
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.map-overlay-info {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(15,23,42,0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.map-overlay-info div { margin-bottom: 2px; }
+.map-overlay-info div:last-child { margin-bottom: 0; }
+.map-overlay-info .hi { color: var(--text-primary); font-weight: 600; }
+
+/* Hotspot List */
+#hotspot-list {
+  max-height: 120px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+.hotspot-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: var(--bg-card);
+  border-radius: 5px;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+.hotspot-severity {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.hotspot-severity.extreme { background: var(--red); box-shadow: 0 0 4px var(--red); }
+.hotspot-severity.high { background: var(--orange); }
+.hotspot-severity.medium { background: var(--yellow); }
+.hotspot-severity.low { background: var(--green); }
+.hotspot-info { flex: 1; }
+.hotspot-info .loc { color: var(--text-primary); font-weight: 500; }
+.hotspot-info .type { color: var(--text-muted); font-size: 9px; }
+.hotspot-score { font-weight: 700; font-size: 11px; }
+
+/* Planning Path */
+#path-info {
+  margin-top: 8px;
+}
+.path-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+}
+.path-row:last-child { border-bottom: none; }
+.path-row .key { color: var(--text-muted); }
+.path-row .val { font-weight: 600; }
+
+/* Loading */
+#loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  gap: 10px;
+}
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--bg-card);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading p { font-size: 12px; color: var(--text-muted); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Tesla World Model Reference */
+.ref-section {
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.ref-section strong { color: var(--primary-light); }
+</style>
+</head>
+<body>
+<div id="header">
+  <h1>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+    <span>世界模型</span>对照验证 | 可达性幻觉分析
+  </h1>
+  <span class="badge">Tesla-inspired</span>
+</div>
+
+<div id="main">
+  <!-- Left column -->
+  <div id="score-section" class="panel">
+    <div class="panel-title">幻觉假设评分</div>
+    <div id="score-gauge">
+      <svg viewBox="0 0 180 90">
+        <path class="gauge-bg" d="M 10 80 A 70 70 0 0 1 170 80" />
+        <path id="gauge-fill" class="gauge-bg" d="M 10 80 A 70 70 0 0 1 170 80"
+          stroke-dasharray="220" stroke-dashoffset="220" />
+      </svg>
+      <div id="score-value">--</div>
+      <div id="score-label">幻觉假设评分</div>
+    </div>
+    <div id="score-interpretation" class="score-interpretation">加载数据中...</div>
+
+    <div style="margin-top:14px; margin-bottom:6px;" class="panel-title">数据概览</div>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="m-label">街景记录</div>
+        <div class="m-value" id="m-sv-records">--</div>
+        <div class="m-sub">VLM标注</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-label">网格单元</div>
+        <div class="m-value" id="m-grid-cells">--</div>
+        <div class="m-sub">有效栅格</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-label">OSM边数</div>
+        <div class="m-value" id="m-osm-edges">--</div>
+        <div class="m-sub">道路网络</div>
+      </div>
+      <div class="metric-card highlight">
+        <div class="m-label">热点数量</div>
+        <div class="m-value" id="m-hotspots">--</div>
+        <div class="m-sub">偏差超标</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="metrics-section" class="panel">
+    <div class="panel-title">嵌入空间对比</div>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="m-label">余弦相似度</div>
+        <div class="m-value" id="m-cos-sim">--</div>
+        <div class="m-sub">1=完全一致</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-label">欧氏偏差</div>
+        <div class="m-value" id="m-eucl-dev">--</div>
+        <div class="m-sub">偏差距离</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-label">规划偏距均值</div>
+        <div class="m-value" id="m-gap-mean">--</div>
+        <div class="m-sub">路径偏差</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-label">规划偏距最大</div>
+        <div class="m-value" id="m-gap-max">--</div>
+        <div class="m-sub">最差路段</div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;" class="panel-title">规划偏距详情</div>
+    <div id="path-info">
+      <div class="path-row"><span class="key">低偏差路段</span><span class="val" id="p-low">--</span></div>
+      <div class="path-row"><span class="key">中偏差路段</span><span class="val" id="p-med">--</span></div>
+      <div class="path-row"><span class="key">高偏差路段</span><span class="val" id="p-high">--</span></div>
+      <div class="path-row"><span class="key">极端偏差路段</span><span class="val" id="p-extreme">--</span></div>
+    </div>
+  </div>
+
+  <div id="occupancy-section" class="panel">
+    <div class="panel-title">物理 vs 数字占用对比</div>
+    <div class="occ-compare">
+      <div class="occ-row">
+        <span class="occ-label">物理</span>
+        <div class="occ-bar-wrap">
+          <div class="occ-bar phys-bar" id="phys-bar" style="width:0%"><span id="phys-bar-txt">0%</span></div>
+        </div>
+        <span class="occ-value" id="phys-occ-val">--</span>
+      </div>
+      <div class="occ-row">
+        <span class="occ-label">数字</span>
+        <div class="occ-bar-wrap">
+          <div class="occ-bar dig-bar" id="dig-bar" style="width:0%"><span id="dig-bar-txt">0%</span></div>
+        </div>
+        <span class="occ-value" id="dig-occ-val">--</span>
+      </div>
+    </div>
+    <div class="gap-indicator">
+      <div class="gap-label">占用差异 (物理 - 数字)</div>
+      <div class="gap-value" id="occ-gap-val">--</div>
+      <div class="gap-sub" id="occ-gap-desc">数字乐观 / 数字悲观</div>
+    </div>
+
+    <div class="ref-section">
+      <strong>Tesla Occupancy Network 参照：</strong>物理世界模型基于街景语义分割（建筑率、绿视率、开敞度、密度），反映真实可达性约束。数字世界模型基于OSM道路拓扑，假设有路即通。两者的系统性偏差即为"可达性幻觉"的来源。
+    </div>
+  </div>
+
+  <!-- Right column: Map -->
+  <div id="map-section" class="panel">
+    <div class="panel-title">世界模型栅格对照</div>
+    <div class="map-tabs">
+      <button class="map-tab active" data-view="occupancy">占用对照</button>
+      <button class="map-tab" data-view="embedding">嵌入对比</button>
+      <button class="map-tab" data-view="planning">规划路径</button>
+    </div>
+    <div id="map-container">
+      <canvas id="map-canvas"></canvas>
+      <div id="loading">
+        <div class="spinner"></div>
+        <p>正在加载世界模型数据...</p>
+      </div>
+      <div class="map-overlay-info" id="map-overlay" style="display:none;">
+        <div>视图: <span class="hi" id="ov-view">--</span></div>
+        <div>单元: <span class="hi" id="ov-cells">--</span></div>
+        <div>偏差: <span class="hi" id="ov-dev">--</span></div>
+      </div>
+      <div class="map-legend" id="map-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#06B6D4"></div>低占用 (0-0.3)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#EAB308"></div>中占用 (0.3-0.6)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div>高占用 (0.6-1.0)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#A855F7"></div>数字 > 物理</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#22C55E"></div>物理 > 数字</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLOR_PHYS_LOW  = [6,  182, 212];   // cyan
+const COLOR_PHYS_MID  = [234, 179,   8];   // yellow
+const COLOR_PHYS_HIGH = [239,  68,  68];   // red
+const COLOR_DIGITAL   = [168,  85, 247];   // purple
+const COLOR_HOTSPOT  = [239,  68,  68];   // red
+const COLOR_PATH_PHYS = [6,  182, 212, 200];
+const COLOR_PATH_DIG  = [168, 85, 247, 200];
+
+let currentView = 'occupancy';
+
+
+
+function scoreColor(score) {
+  if (score < 0.3) return '#22C55E';
+  if (score < 0.5) return '#EAB308';
+  if (score < 0.7) return '#F97316';
+  return '#EF4444';
+}
+
+function scoreLabel(score) {
+  if (score < 0.2) return '极低幻觉偏差 — 物理与数字模型高度吻合';
+  if (score < 0.4) return '较低幻觉偏差 — 存在局部差异，关注特定路段';
+  if (score < 0.6) return '中等幻觉偏差 — 物理约束显著不同于数字假设';
+  if (score < 0.8) return '较高幻觉偏差 — 数字模型系统性乐观或悲观';
+  return '极高幻觉偏差 — 物理与数字世界严重背离，需重点关注';
+}
+
+function updateUI() {
+  // Hypothesis score
+  const score = summary.illusion_hypothesis_score;
+  const gauge = document.getElementById('gauge-fill');
+  const maxOffset = 220;
+  const offset = maxOffset * (1 - score);
+  gauge.style.strokeDashoffset = offset;
+  gauge.style.stroke = scoreColor(score);
+  document.getElementById('score-value').textContent = score.toFixed(3);
+  document.getElementById('score-value').style.color = scoreColor(score);
+  document.getElementById('score-interpretation').textContent = scoreLabel(score);
+
+  // Data summary
+  document.getElementById('m-sv-records').textContent = summary.data_summary.sv_records;
+  document.getElementById('m-grid-cells').textContent = summary.data_summary.grid_cells;
+  document.getElementById('m-osm-edges').textContent = summary.data_summary.osm_edges.toLocaleString();
+  document.getElementById('m-hotspots').textContent = embComp.n_hotspots;
+
+  // Embedding metrics
+  document.getElementById('m-cos-sim').textContent = embComp.global_cosine_sim.toFixed(3);
+  document.getElementById('m-eucl-dev').textContent = embComp.global_euclidean_dev.toFixed(3);
+  document.getElementById('m-gap-mean').textContent = planGap.mean_gap_score.toFixed(3);
+  document.getElementById('m-gap-max').textContent = planGap.max_gap_score.toFixed(3);
+
+  // Gap levels
+  const gl = planGap.gap_levels;
+  document.getElementById('p-low').textContent = gl.low + ' 条';
+  document.getElementById('p-med').textContent = gl.medium + ' 条';
+  document.getElementById('p-high').textContent = gl.high + ' 条';
+  document.getElementById('p-extreme').textContent = gl.extreme + ' 条';
+  document.getElementById('p-low').style.color = '#22C55E';
+  document.getElementById('p-med').style.color = '#EAB308';
+  document.getElementById('p-high').style.color = '#F97316';
+  document.getElementById('p-extreme').style.color = '#EF4444';
+
+  // Occupancy bars
+  const physMean = summary.physical_occupancy.mean_p_occ;
+  const digMean = summary.digital_occupancy.mean_p_occ;
+  const maxOcc = 1.0;
+  setTimeout(() => {
+    document.getElementById('phys-bar').style.width = (physMean / maxOcc * 100) + '%';
+    document.getElementById('phys-bar-txt').textContent = physMean.toFixed(3);
+    document.getElementById('dig-bar').style.width = (digMean / maxOcc * 100) + '%';
+    document.getElementById('dig-bar-txt').textContent = digMean.toFixed(3);
+    document.getElementById('phys-occ-val').textContent = physMean.toFixed(3);
+    document.getElementById('dig-occ-val').textContent = digMean.toFixed(3);
+
+    const gap = physMean - digMean;
+    document.getElementById('occ-gap-val').textContent = (gap >= 0 ? '+' : '') + gap.toFixed(3);
+    document.getElementById('occ-gap-val').style.color = gap > 0 ? '#EF4444' : '#22C55E';
+    document.getElementById('occ-gap-desc').textContent =
+      gap > 0 ? '物理约束 > 数字假设（数字乐观偏差）'
+              : '物理约束 < 数字假设（物理乐观偏差）';
+  }, 300);
+}
+
+function occColor(v) {
+  if (v < 0.3) return `rgb(${COLOR_PHYS_LOW.join(',')})`;
+  if (v < 0.6) return `rgb(${COLOR_PHYS_MID.join(',')})`;
+  return `rgb(${COLOR_PHYS_HIGH.join(',')})`;
+}
+
+function updateMap() {
+  const canvas = document.getElementById('map-canvas');
+  const container = document.getElementById('map-container');
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const cells = physOcc.cells;
+  if (!cells || cells.length === 0) return;
+
+  let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (const c of cells) {
+    if (c.lon < minLon) minLon = c.lon;
+    if (c.lon > maxLon) maxLon = c.lon;
+    if (c.lat < minLat) minLat = c.lat;
+    if (c.lat > maxLat) maxLat = c.lat;
+  }
+
+  const pad = 40;
+  const w = canvas.width - pad * 2;
+  const h = canvas.height - pad * 2;
+  const toX = (lon) => pad + (lon - minLon) / (maxLon - minLon) * w;
+  const toY = (lat) => pad + (maxLat - lat) / (maxLat - minLat) * h;
+  const cellSize = Math.max(4, Math.min(20, Math.min(w / (cells.length || 1), h / (cells.length || 1))));
+
+  // Build digital cell lookup
+  const digLookup = {};
+  if (digOcc && digOcc.cells) {
+    for (const c of digOcc.cells) {
+      digLookup[`${c.grid_x},${c.grid_y}`] = c;
+    }
+  }
+
+  if (currentView === 'occupancy') {
+    for (const c of cells) {
+      const dx = toX(c.lon);
+      const dy = toY(c.lat);
+      const col = occColor(c.p_occ);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(dx, dy, cellSize * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+
+      const dk = digLookup[`${c.grid_x},${c.grid_y}`];
+      if (dk) {
+        ctx.strokeStyle = `rgba(${COLOR_DIGITAL.join(',')},0.7)`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(dx, dy, cellSize * 0.6 + 2, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    // Legend update
+    document.getElementById('map-legend').innerHTML = `
+      <div class="legend-item"><div class="legend-dot" style="background:#06B6D4"></div>低占用 (0-0.3)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#EAB308"></div>中占用 (0.3-0.6)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div>高占用 (0.6-1.0)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#A855F7"></div>紫色描边=数字模型</div>
+    `;
+    document.getElementById('map-overlay').style.display = 'block';
+    document.getElementById('ov-view').textContent = '占用对照';
+    document.getElementById('ov-cells').textContent = cells.length + ' 单元';
+    document.getElementById('ov-dev').textContent = summary.occupancy_gap.physical_vs_digital.toFixed(3);
+  } else if (currentView === 'embedding') {
+    // Show embedding deviation heatmap
+    const embLookup = {};
+    if (embComp && embComp.cell_results) {
+      for (const r of embComp.cell_results) {
+        embLookup[`${r.grid_x},${r.grid_y}`] = r;
+      }
+    }
+    for (const c of cells) {
+      const dx = toX(c.lon);
+      const dy = toY(c.lat);
+      const er = embLookup[`${c.grid_x},${c.grid_y}`];
+      let col, alpha = 0.8;
+      if (er && er.deviation !== undefined) {
+        const d = Math.min(er.deviation, 1.5) / 1.5;
+        const r = Math.round(6 + d * (239 - 6));
+        const g = Math.round(182 + d * (68 - 182));
+        const b = Math.round(212 + d * (68 - 212));
+        col = `rgba(${r},${g},${b},${alpha})`;
+      } else {
+        col = `rgba(100,116,139,${alpha})`;
+      }
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.arc(dx, dy, cellSize * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (er && er.is_hotspot) {
+        ctx.strokeStyle = '#EF4444';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([2, 2]);
+        ctx.beginPath();
+        ctx.arc(dx, dy, cellSize + 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    document.getElementById('map-legend').innerHTML = `
+      <div class="legend-item"><div class="legend-dot" style="background:#06B6D4"></div>低偏差 (≈0)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#EAB308"></div>中偏差</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div>高偏差</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#EF4444; border: 1px dashed #EF4444"></div>虚线=热点</div>
+    `;
+    document.getElementById('map-legend').style.display = 'block';
+    document.getElementById('map-overlay').style.display = 'block';
+    document.getElementById('ov-view').textContent = '嵌入对比';
+    document.getElementById('ov-cells').textContent = cells.length + ' 单元';
+    document.getElementById('ov-dev').textContent = 'cos=' + embComp.global_cosine_sim.toFixed(3);
+  } else if (currentView === 'planning') {
+    // Show planning paths
+    if (planGap && planGap.paths) {
+      const pathColors = { low: [34,197,94], medium: [234,179,8], high: [249,115,22], extreme: [239,68,68] };
+      for (const p of planGap.paths) {
+        const level = p.gap_level || 'medium';
+        const cols = pathColors[level] || pathColors.medium;
+        ctx.strokeStyle = `rgba(${cols.join(',')},0.5)`;
+        ctx.lineWidth = 1.5;
+
+        // Draw digital path
+        if (p.digital_path) {
+          ctx.beginPath();
+          for (let i = 0; i < p.digital_path.length; i++) {
+            const pt = p.digital_path[i];
+            const px = toX(pt[0]);
+            const py = toY(pt[1]);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        }
+
+        // Draw physical path
+        if (p.physical_path) {
+          ctx.strokeStyle = `rgba(${cols.join(',')},0.9)`;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          for (let i = 0; i < p.physical_path.length; i++) {
+            const pt = p.physical_path[i];
+            const px = toX(pt[0]);
+            const py = toY(pt[1]);
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        }
+      }
+    }
+
+    document.getElementById('map-legend').innerHTML = `
+      <div class="legend-item"><div class="legend-dot" style="background:#22C55E"></div>低偏差路径</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#EAB308"></div>中偏差路径</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#F97316"></div>高偏差路径</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div>极端偏差路径</div>
+    `;
+    document.getElementById('map-legend').style.display = 'block';
+    document.getElementById('map-overlay').style.display = 'block';
+    document.getElementById('ov-view').textContent = '规划路径';
+    document.getElementById('ov-cells').textContent = (planGap.paths || []).length + ' 路径';
+    document.getElementById('ov-dev').textContent = 'mean=' + planGap.mean_gap_score.toFixed(3);
+  }
+
+  // Label
+  ctx.fillStyle = '#64748B';
+  ctx.font = '10px -apple-system, sans-serif';
+  ctx.fillText(`网格分辨率: ${summary.data_summary.grid_size_deg}°`, pad, canvas.height - 8);
+}
+
+// Tab switching
+document.querySelectorAll('.map-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.map-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentView = tab.dataset.view;
+    updateMap();
+  });
+});
+
+// Resize handling
+const ro = new ResizeObserver(() => updateMap());
+ro.observe(document.getElementById('map-container'));
+
+updateUI();
+updateMap();
+document.getElementById('loading').style.display = 'none';
+
+</script>
+
+<script>
+const summary = {"generated_at": "2026-06-08 14:11:07.832066", "data_summary": {"sv_records": 136, "sv_unique_points": 34, "grid_cells": 34, "grid_size_deg": 0.003, "osm_edges": 49840, "osm_nodes": 33985}, "physical_occupancy": {"mean_p_occ": 0.4224, "high_occ_cells": 0, "low_occ_cells": 0}, "digital_occupancy": {"mean_p_occ": 0.2178}, "occupancy_gap": {"physical_vs_digital": 0.2046, "interpretation": "正值表示数字模型低估了物理通行障碍（更乐观），负值表示数字模型高估了通行难度"}, "embedding_comparison": {"global_cosine_sim": 0.9317, "global_euclidean_dev": 0.1862, "n_hotspots": 0}, "planning_gap": {"mean_gap_score": 0.251, "max_gap_score": 0.258, "gap_levels": {"low": 0, "medium": 4, "high": 0, "extreme": 0}}, "illusion_hypothesis_score": 0.1707, "hypothesis_interpretation": "中幻觉：存在系统性偏差，需关注特定区域", "files": {"physical_occupancy": "world_model_output\\physical_occupancy.json", "digital_occupancy": "world_model_output\\digital_occupancy.json", "embedding_comparison": "world_model_output\\embedding_comparison.json", "planning_gap": "world_model_output\\planning_gap.json"}};
+const physOcc = {"grid_size_deg": 0.003, "bounds": [113.883, 22.479, 113.994, 22.593], "total_cells": 34, "cells": [{"lng": 113.883, "lat": 22.5, "center_lng": 113.8840187311072, "center_lat": 22.50094029783149, "p_occ": 0.49, "n_samples": 4, "openness": 5.5, "walkability": 5.75, "canyon": 6.5, "density": 7.0, "building_pct": 0.4, "road_pct": 0.33, "green_pct": 0.22, "urban_form": "unknown"}, {"lng": 113.892, "lat": 22.53, "center_lng": 113.8925633130414, "center_lat": 22.53026008168123, "p_occ": 0.38, "n_samples": 4, "openness": 6.0, "walkability": 7.75, "canyon": 6.0, "density": 7.75, "building_pct": 0.62, "road_pct": 0.23, "green_pct": 0.14, "urban_form": "unknown"}, {"lng": 113.895, "lat": 22.479, "center_lng": 113.89537357507588, "center_lat": 22.48178435162769, "p_occ": 0.365, "n_samples": 4, "openness": 5.5, "walkability": 7.0, "canyon": 3.5, "density": 5.5, "building_pct": 0.53, "road_pct": 0.33, "green_pct": 0.21, "urban_form": "unknown"}, {"lng": 113.895, "lat": 22.512, "center_lng": 113.89507397428068, "center_lat": 22.513112969434847, "p_occ": 0.54, "n_samples": 4, "openness": 5.5, "walkability": 4.5, "canyon": 6.5, "density": 5.75, "building_pct": 0.35, "road_pct": 0.3, "green_pct": 0.16, "urban_form": "unknown"}, {"lng": 113.895, "lat": 22.518, "center_lng": 113.8953603, "center_lat": 22.5182615, "p_occ": 0.33, "n_samples": 4, "openness": 6.0, "walkability": 7.75, "canyon": 4.0, "density": 6.75, "building_pct": 0.5, "road_pct": 0.25, "green_pct": 0.25, "urban_form": "unknown"}, {"lng": 113.895, "lat": 22.53, "center_lng": 113.89659775036284, "center_lat": 22.531468515069964, "p_occ": 0.4988, "n_samples": 4, "openness": 5.25, "walkability": 5.75, "canyon": 6.5, "density": 8.25, "building_pct": 0.68, "road_pct": 0.18, "green_pct": 0.09, "urban_form": "unknown"}, {"lng": 113.901, "lat": 22.518, "center_lng": 113.90254372738532, "center_lat": 22.52067200789162, "p_occ": 0.4163, "n_samples": 4, "openness": 5.25, "walkability": 6.25, "canyon": 4.0, "density": 7.0, "building_pct": 0.5, "road_pct": 0.28, "green_pct": 0.2, "urban_form": "unknown"}, {"lng": 113.904, "lat": 22.527, "center_lng": 113.90498901487362, "center_lat": 22.528524010206358, "p_occ": 0.4163, "n_samples": 4, "openness": 5.25, "walkability": 6.25, "canyon": 4.0, "density": 7.25, "building_pct": 0.47, "road_pct": 0.35, "green_pct": 0.19, "urban_form": "unknown"}, {"lng": 113.91, "lat": 22.485, "center_lng": 113.91048472519157, "center_lat": 22.48503812447789, "p_occ": 0.375, "n_samples": 4, "openness": 6.0, "walkability": 7.25, "canyon": 5.0, "density": 8.25, "building_pct": 0.72, "road_pct": 0.18, "green_pct": 0.08, "urban_form": "unknown"}, {"lng": 113.913, "lat": 22.491, "center_lng": 113.914454079385, "center_lat": 22.492678023821806, "p_occ": 0.4225, "n_samples": 4, "openness": 4.75, "walkability": 7.0, "canyon": 4.75, "density": 6.25, "building_pct": 0.45, "road_pct": 0.25, "green_pct": 0.19, "urban_form": "unknown"}, {"lng": 113.913, "lat": 22.512, "center_lng": 113.91325145745954, "center_lat": 22.512478389625773, "p_occ": 0.455, "n_samples": 4, "openness": 5.5, "walkability": 6.0, "canyon": 5.5, "density": 7.25, "building_pct": 0.62, "road_pct": 0.17, "green_pct": 0.06, "urban_form": "unknown"}, {"lng": 113.916, "lat": 22.497, "center_lng": 113.91750737498012, "center_lat": 22.49806523812569, "p_occ": 0.4225, "n_samples": 4, "openness": 4.75, "walkability": 7.0, "canyon": 4.75, "density": 6.75, "building_pct": 0.57, "road_pct": 0.24, "green_pct": 0.19, "urban_form": "unknown"}, {"lng": 113.916, "lat": 22.527, "center_lng": 113.91630716623892, "center_lat": 22.52774739145828, "p_occ": 0.4213, "n_samples": 4, "openness": 5.25, "walkability": 6.75, "canyon": 5.0, "density": 7.0, "building_pct": 0.57, "road_pct": 0.23, "green_pct": 0.09, "urban_form": "unknown"}, {"lng": 113.916, "lat": 22.557, "center_lng": 113.91763212211114, "center_lat": 22.55930215192001, "p_occ": 0.4425, "n_samples": 4, "openness": 5.0, "walkability": 6.75, "canyon": 5.5, "density": 6.25, "building_pct": 0.42, "road_pct": 0.33, "green_pct": 0.16, "urban_form": "unknown"}, {"lng": 113.919, "lat": 22.53, "center_lng": 113.91972755553992, "center_lat": 22.531067488915397, "p_occ": 0.3775, "n_samples": 4, "openness": 5.75, "walkability": 7.25, "canyon": 4.75, "density": 8.0, "building_pct": 0.7, "road_pct": 0.25, "green_pct": 0.12, "urban_form": "unknown"}, {"lng": 113.919, "lat": 22.554, "center_lng": 113.9200131, "center_lat": 22.555267, "p_occ": 0.3888, "n_samples": 4, "openness": 5.25, "walkability": 7.25, "canyon": 4.5, "density": 7.25, "building_pct": 0.47, "road_pct": 0.33, "green_pct": 0.17, "urban_form": "unknown"}, {"lng": 113.919, "lat": 22.56, "center_lng": 113.92111047580646, "center_lat": 22.56130700318144, "p_occ": 0.3837, "n_samples": 4, "openness": 5.5, "walkability": 7.0, "canyon": 4.25, "density": 5.75, "building_pct": 0.47, "road_pct": 0.25, "green_pct": 0.16, "urban_form": "unknown"}, {"lng": 113.922, "lat": 22.512, "center_lng": 113.9249169739156, "center_lat": 22.513048909072825, "p_occ": 0.45, "n_samples": 4, "openness": 5.0, "walkability": 6.25, "canyon": 5.0, "density": 6.25, "building_pct": 0.47, "road_pct": 0.23, "green_pct": 0.1, "urban_form": "unknown"}, {"lng": 113.922, "lat": 22.515, "center_lng": 113.9240872, "center_lat": 22.5165088, "p_occ": 0.4562, "n_samples": 4, "openness": 5.25, "walkability": 6.5, "canyon": 6.0, "density": 7.5, "building_pct": 0.6, "road_pct": 0.16, "green_pct": 0.1, "urban_form": "unknown"}, {"lng": 113.922, "lat": 22.581, "center_lng": 113.92489093445867, "center_lat": 22.58290391991132, "p_occ": 0.4925, "n_samples": 4, "openness": 5.5, "walkability": 4.75, "canyon": 5.0, "density": 5.75, "building_pct": 0.28, "road_pct": 0.23, "green_pct": 0.29, "urban_form": "unknown"}, {"lng": 113.925, "lat": 22.485, "center_lng": 113.9259596, "center_lat": 22.4864691, "p_occ": 0.45, "n_samples": 4, "openness": 5.0, "walkability": 6.25, "canyon": 5.0, "density": 6.75, "building_pct": 0.55, "road_pct": 0.3, "green_pct": 0.12, "urban_form": "unknown"}, {"lng": 113.925, "lat": 22.5, "center_lng": 113.9274415, "center_lat": 22.5021293, "p_occ": 0.405, "n_samples": 4, "openness": 5.5, "walkability": 7.25, "canyon": 5.5, "density": 7.25, "building_pct": 0.68, "road_pct": 0.18, "green_pct": 0.2, "urban_form": "unknown"}, {"lng": 113.925, "lat": 22.539, "center_lng": 113.927155, "center_lat": 22.5394588, "p_occ": 0.4, "n_samples": 4, "openness": 5.5, "walkability": 6.75, "canyon": 4.5, "density": 6.25, "building_pct": 0.4, "road_pct": 0.28, "green_pct": 0.24, "urban_form": "unknown"}, {"lng": 113.928, "lat": 22.506, "center_lng": 113.92962954569322, "center_lat": 22.50807862372798, "p_occ": 0.3975, "n_samples": 4, "openness": 4.75, "walkability": 7.0, "canyon": 3.75, "density": 6.0, "building_pct": 0.35, "road_pct": 0.23, "green_pct": 0.29, "urban_form": "unknown"}, {"lng": 113.931, "lat": 22.518, "center_lng": 113.93202263813708, "center_lat": 22.520066737847603, "p_occ": 0.4175, "n_samples": 4, "openness": 5.25, "walkability": 7.0, "canyon": 5.25, "density": 6.75, "building_pct": 0.47, "road_pct": 0.21, "green_pct": 0.11, "urban_form": "unknown"}, {"lng": 113.931, "lat": 22.542, "center_lng": 113.9339176, "center_lat": 22.542275, "p_occ": 0.3562, "n_samples": 4, "openness": 6.25, "walkability": 7.5, "canyon": 5.0, "density": 5.75, "building_pct": 0.5, "road_pct": 0.23, "green_pct": 0.16, "urban_form": "unknown"}, {"lng": 113.934, "lat": 22.521, "center_lng": 113.9355719649967, "center_lat": 22.522056516293752, "p_occ": 0.415, "n_samples": 4, "openness": 5.5, "walkability": 7.0, "canyon": 5.5, "density": 7.25, "building_pct": 0.53, "road_pct": 0.25, "green_pct": 0.15, "urban_form": "unknown"}, {"lng": 113.937, "lat": 22.488, "center_lng": 113.9384125175671, "center_lat": 22.490341039739757, "p_occ": 0.39, "n_samples": 4, "openness": 5.5, "walkability": 7.0, "canyon": 4.5, "density": 6.5, "building_pct": 0.47, "road_pct": 0.28, "green_pct": 0.14, "urban_form": "unknown"}, {"lng": 113.943, "lat": 22.581, "center_lng": 113.9448046, "center_lat": 22.5833664, "p_occ": 0.4425, "n_samples": 4, "openness": 5.25, "walkability": 5.75, "canyon": 4.25, "density": 6.5, "building_pct": 0.5, "road_pct": 0.2, "green_pct": 0.24, "urban_form": "unknown"}, {"lng": 113.949, "lat": 22.59, "center_lng": 113.9498455, "center_lat": 22.5908149, "p_occ": 0.34, "n_samples": 4, "openness": 6.0, "walkability": 7.5, "canyon": 4.0, "density": 6.75, "building_pct": 0.17, "road_pct": 0.17, "green_pct": 0.15, "urban_form": "unknown"}, {"lng": 113.952, "lat": 22.566, "center_lng": 113.95373016627602, "center_lat": 22.56722103671782, "p_occ": 0.5625, "n_samples": 4, "openness": 4.5, "walkability": 4.5, "canyon": 6.0, "density": 6.0, "building_pct": 0.38, "road_pct": 0.28, "green_pct": 0.17, "urban_form": "unknown"}, {"lng": 113.958, "lat": 22.548, "center_lng": 113.96039001615688, "center_lat": 22.54808394108749, "p_occ": 0.4213, "n_samples": 4, "openness": 5.75, "walkability": 6.0, "canyon": 4.5, "density": 7.0, "building_pct": 0.55, "road_pct": 0.33, "green_pct": 0.2, "urban_form": "unknown"}, {"lng": 113.985, "lat": 22.536, "center_lng": 113.9862209, "center_lat": 22.5386603, "p_occ": 0.3987, "n_samples": 4, "openness": 5.5, "walkability": 7.25, "canyon": 5.25, "density": 5.75, "building_pct": 0.47, "road_pct": 0.3, "green_pct": 0.21, "urban_form": "unknown"}, {"lng": 113.994, "lat": 22.593, "center_lng": 113.9951085, "center_lat": 22.5936942, "p_occ": 0.4425, "n_samples": 4, "openness": 4.75, "walkability": 6.5, "canyon": 4.75, "density": 7.5, "building_pct": 0.65, "road_pct": 0.2, "green_pct": 0.1, "urban_form": "unknown"}], "occupancy_stats": {"mean_p_occ": 0.4224, "median_p_occ": 0.4169, "high_occ_cells": 0, "low_occ_cells": 0}, "method": "streetview_voxel", "description": "物理占用网格：canyon + walkability + openness 加权融合。canyon_weight=0.25, walkability_weight=0.4, openness_weight=0.35"};
+const digOcc = {"total_edges": 49840, "total_nodes": 33985, "road_class_breakdown": {"residential": {"edge_count": 4688, "weight": 0.15, "p_occ": 0.15, "share": 0.0941}, "pedestrian": {"edge_count": 450, "weight": 0.02, "p_occ": 0.02, "share": 0.009}, "secondary": {"edge_count": 3169, "weight": 0.5, "p_occ": 0.5, "share": 0.0636}, "tertiary": {"edge_count": 3322, "weight": 0.3, "p_occ": 0.3, "share": 0.0667}, "unclassified": {"edge_count": 2787, "weight": 0.2, "p_occ": 0.2, "share": 0.0559}, "service": {"edge_count": 9123, "weight": 0.1, "p_occ": 0.1, "share": 0.183}, "footway": {"edge_count": 15758, "weight": 0.02, "p_occ": 0.02, "share": 0.3162}, "steps": {"edge_count": 2136, "weight": 0.45, "p_occ": 0.45, "share": 0.0429}, "primary": {"edge_count": 3537, "weight": 0.7, "p_occ": 0.7, "share": 0.071}, "tertiary_link": {"edge_count": 226, "weight": 0.3, "p_occ": 0.3, "share": 0.0045}, "path": {"edge_count": 624, "weight": 0.02, "p_occ": 0.02, "share": 0.0125}, "primary_link": {"edge_count": 2603, "weight": 0.65, "p_occ": 0.65, "share": 0.0522}, "secondary_link": {"edge_count": 1013, "weight": 0.5, "p_occ": 0.5, "share": 0.0203}, "living_street": {"edge_count": 322, "weight": 0.1, "p_occ": 0.1, "share": 0.0065}, "track": {"edge_count": 82, "weight": 0.35, "p_occ": 0.35, "share": 0.0016}}, "mean_p_occ": 0.2178, "method": "osm_occupancy", "description": "数字占用：OSM 道路类型分层。数字模型假设有路即通行，但物理现实未必如此。"};
+const embComp = {"n_cells": 34, "global_cosine_sim": 0.9317, "global_euclidean_dev": 0.1862, "cosine_std": 0.0224, "hotspots": [], "n_hotspots": 0, "per_cell_deviation": [{"lng": 113.883, "lat": 22.5, "cosine_sim": 0.9315, "euclidean_dev": 0.1739, "phys_emb": [0.55, 0.575, 0.35, 0.22], "dig_emb": [0.4, 0.5, 0.55, 0.45], "urban_form": "unknown", "p_occ": 0.49}, {"lng": 113.892, "lat": 22.53, "cosine_sim": 0.894, "euclidean_dev": 0.2401, "phys_emb": [0.6, 0.775, 0.4, 0.14], "dig_emb": [0.4, 0.5, 0.698, 0.302], "urban_form": "unknown", "p_occ": 0.38}, {"lng": 113.895, "lat": 22.479, "cosine_sim": 0.949, "euclidean_dev": 0.1851, "phys_emb": [0.55, 0.7, 0.65, 0.21], "dig_emb": [0.4, 0.5, 0.54, 0.46], "urban_form": "unknown", "p_occ": 0.365}, {"lng": 113.895, "lat": 22.512, "cosine_sim": 0.8974, "euclidean_dev": 0.2122, "phys_emb": [0.55, 0.45, 0.35, 0.16], "dig_emb": [0.4, 0.5, 0.462, 0.538], "urban_form": "unknown", "p_occ": 0.54}, {"lng": 113.895, "lat": 22.518, "cosine_sim": 0.9574, "euclidean_dev": 0.1885, "phys_emb": [0.6, 0.775, 0.6, 0.25], "dig_emb": [0.4, 0.5, 0.588, 0.412], "urban_form": "unknown", "p_occ": 0.33}, {"lng": 113.895, "lat": 22.53, "cosine_sim": 0.8957, "euclidean_dev": 0.2281, "phys_emb": [0.525, 0.575, 0.35, 0.09], "dig_emb": [0.4, 0.5, 0.752, 0.248], "urban_form": "unknown", "p_occ": 0.4988}, {"lng": 113.901, "lat": 22.518, "cosine_sim": 0.9666, "euclidean_dev": 0.1335, "phys_emb": [0.525, 0.625, 0.6, 0.2], "dig_emb": [0.4, 0.5, 0.6, 0.4], "urban_form": "unknown", "p_occ": 0.4163}, {"lng": 113.904, "lat": 22.527, "cosine_sim": 0.9638, "euclidean_dev": 0.1382, "phys_emb": [0.525, 0.625, 0.6, 0.19], "dig_emb": [0.4, 0.5, 0.597, 0.403], "urban_form": "unknown", "p_occ": 0.4163}, {"lng": 113.91, "lat": 22.485, "cosine_sim": 0.9158, "euclidean_dev": 0.216, "phys_emb": [0.6, 0.725, 0.5, 0.08], "dig_emb": [0.4, 0.5, 0.772, 0.228], "urban_form": "unknown", "p_occ": 0.375}, {"lng": 113.913, "lat": 22.491, "cosine_sim": 0.9398, "euclidean_dev": 0.1732, "phys_emb": [0.475, 0.7, 0.525, 0.19], "dig_emb": [0.4, 0.5, 0.537, 0.463], "urban_form": "unknown", "p_occ": 0.4225}, {"lng": 113.913, "lat": 22.512, "cosine_sim": 0.9178, "euclidean_dev": 0.1959, "phys_emb": [0.55, 0.6, 0.45, 0.06], "dig_emb": [0.4, 0.5, 0.672, 0.328], "urban_form": "unknown", "p_occ": 0.455}, {"lng": 113.916, "lat": 22.497, "cosine_sim": 0.955, "euclidean_dev": 0.1502, "phys_emb": [0.475, 0.7, 0.525, 0.19], "dig_emb": [0.4, 0.5, 0.623, 0.377], "urban_form": "unknown", "p_occ": 0.4225}, {"lng": 113.916, "lat": 22.527, "cosine_sim": 0.9279, "euclidean_dev": 0.1871, "phys_emb": [0.525, 0.675, 0.5, 0.09], "dig_emb": [0.4, 0.5, 0.635, 0.365], "urban_form": "unknown", "p_occ": 0.4213}, {"lng": 113.916, "lat": 22.557, "cosine_sim": 0.9206, "euclidean_dev": 0.1915, "phys_emb": [0.5, 0.675, 0.45, 0.16], "dig_emb": [0.4, 0.5, 0.522, 0.478], "urban_form": "unknown", "p_occ": 0.4425}, {"lng": 113.919, "lat": 22.53, "cosine_sim": 0.933, "euclidean_dev": 0.1929, "phys_emb": [0.575, 0.725, 0.525, 0.12], "dig_emb": [0.4, 0.5, 0.75, 0.25], "urban_form": "unknown", "p_occ": 0.3775}, {"lng": 113.919, "lat": 22.554, "cosine_sim": 0.9452, "euclidean_dev": 0.175, "phys_emb": [0.525, 0.725, 0.55, 0.17], "dig_emb": [0.4, 0.5, 0.597, 0.403], "urban_form": "unknown", "p_occ": 0.3888}, {"lng": 113.919, "lat": 22.56, "cosine_sim": 0.9256, "euclidean_dev": 0.2038, "phys_emb": [0.55, 0.7, 0.575, 0.16], "dig_emb": [0.4, 0.5, 0.522, 0.478], "urban_form": "unknown", "p_occ": 0.3837}, {"lng": 113.922, "lat": 22.512, "cosine_sim": 0.9162, "euclidean_dev": 0.195, "phys_emb": [0.5, 0.625, 0.5, 0.1], "dig_emb": [0.4, 0.5, 0.547, 0.453], "urban_form": "unknown", "p_occ": 0.45}, {"lng": 113.922, "lat": 22.515, "cosine_sim": 0.9121, "euclidean_dev": 0.2027, "phys_emb": [0.525, 0.65, 0.4, 0.1], "dig_emb": [0.4, 0.5, 0.675, 0.325], "urban_form": "unknown", "p_occ": 0.4562}, {"lng": 113.922, "lat": 22.581, "cosine_sim": 0.9398, "euclidean_dev": 0.1645, "phys_emb": [0.55, 0.475, 0.5, 0.29], "dig_emb": [0.4, 0.5, 0.427, 0.573], "urban_form": "unknown", "p_occ": 0.4925}, {"lng": 113.925, "lat": 22.485, "cosine_sim": 0.9404, "euclidean_dev": 0.1657, "phys_emb": [0.5, 0.625, 0.5, 0.12], "dig_emb": [0.4, 0.5, 0.613, 0.387], "urban_form": "unknown", "p_occ": 0.45}, {"lng": 113.925, "lat": 22.5, "cosine_sim": 0.9297, "euclidean_dev": 0.1913, "phys_emb": [0.55, 0.725, 0.45, 0.2], "dig_emb": [0.4, 0.5, 0.703, 0.297], "urban_form": "unknown", "p_occ": 0.405}, {"lng": 113.925, "lat": 22.539, "cosine_sim": 0.9479, "euclidean_dev": 0.1701, "phys_emb": [0.55, 0.675, 0.55, 0.24], "dig_emb": [0.4, 0.5, 0.512, 0.488], "urban_form": "unknown", "p_occ": 0.4}, {"lng": 113.928, "lat": 22.506, "cosine_sim": 0.9497, "euclidean_dev": 0.1756, "phys_emb": [0.475, 0.7, 0.625, 0.29], "dig_emb": [0.4, 0.5, 0.475, 0.525], "urban_form": "unknown", "p_occ": 0.3975}, {"lng": 113.931, "lat": 22.518, "cosine_sim": 0.9146, "euclidean_dev": 0.2037, "phys_emb": [0.525, 0.7, 0.475, 0.11], "dig_emb": [0.4, 0.5, 0.573, 0.427], "urban_form": "unknown", "p_occ": 0.4175}, {"lng": 113.931, "lat": 22.542, "cosine_sim": 0.9138, "euclidean_dev": 0.227, "phys_emb": [0.625, 0.75, 0.5, 0.16], "dig_emb": [0.4, 0.5, 0.537, 0.463], "urban_form": "unknown", "p_occ": 0.3562}, {"lng": 113.934, "lat": 22.521, "cosine_sim": 0.9275, "euclidean_dev": 0.1894, "phys_emb": [0.55, 0.7, 0.45, 0.15], "dig_emb": [0.4, 0.5, 0.627, 0.373], "urban_form": "unknown", "p_occ": 0.415}, {"lng": 113.937, "lat": 22.488, "cosine_sim": 0.9293, "euclidean_dev": 0.1953, "phys_emb": [0.55, 0.7, 0.55, 0.14], "dig_emb": [0.4, 0.5, 0.56, 0.44], "urban_form": "unknown", "p_occ": 0.39}, {"lng": 113.943, "lat": 22.581, "cosine_sim": 0.9718, "euclidean_dev": 0.1178, "phys_emb": [0.525, 0.575, 0.575, 0.24], "dig_emb": [0.4, 0.5, 0.575, 0.425], "urban_form": "unknown", "p_occ": 0.4425}, {"lng": 113.949, "lat": 22.59, "cosine_sim": 0.8707, "euclidean_dev": 0.2814, "phys_emb": [0.6, 0.75, 0.6, 0.15], "dig_emb": [0.4, 0.5, 0.423, 0.577], "urban_form": "unknown", "p_occ": 0.34}, {"lng": 113.952, "lat": 22.566, "cosine_sim": 0.9353, "euclidean_dev": 0.1794, "phys_emb": [0.45, 0.45, 0.4, 0.17], "dig_emb": [0.4, 0.5, 0.49, 0.51], "urban_form": "unknown", "p_occ": 0.5625}, {"lng": 113.958, "lat": 22.548, "cosine_sim": 0.9621, "euclidean_dev": 0.1386, "phys_emb": [0.575, 0.6, 0.55, 0.2], "dig_emb": [0.4, 0.5, 0.625, 0.375], "urban_form": "unknown", "p_occ": 0.4213}, {"lng": 113.985, "lat": 22.536, "cosine_sim": 0.9309, "euclidean_dev": 0.1917, "phys_emb": [0.55, 0.725, 0.475, 0.21], "dig_emb": [0.4, 0.5, 0.522, 0.478], "urban_form": "unknown", "p_occ": 0.3987}, {"lng": 113.994, "lat": 22.593, "cosine_sim": 0.9491, "euclidean_dev": 0.1571, "phys_emb": [0.475, 0.65, 0.525, 0.1], "dig_emb": [0.4, 0.5, 0.7, 0.3], "urban_form": "unknown", "p_occ": 0.4425}], "interpretation": {"cosine_sim_guide": "1.0=完美吻合, 0=完全相反", "euclidean_dev_guide": "值越大表示数字与物理表征偏差越大"}};
+const planGap = {"n_paths": 4, "paths": [{"path_name": "walkability差异路径_1", "digital_cost": 1364.76, "physical_cost": 518.61, "cost_gap": 846.15, "detour_ratio": 1.0, "blocked_ratio": 0.0, "gap_score": 0.248, "avg_physical_occ": 0.38, "n_physical_steps": 1, "coords": [[22.53026008168123, 113.8925633130414], [22.5182615, 113.8953603]]}, {"path_name": "walkability差异路径_2", "digital_cost": 5639.74, "physical_cost": 2008.88, "cost_gap": 3630.86, "detour_ratio": 1.0, "blocked_ratio": 0.0, "gap_score": 0.258, "avg_physical_occ": 0.3562, "n_physical_steps": 1, "coords": [[22.542275, 113.9339176], [22.5908149, 113.9498455]]}, {"path_name": "walkability差异路径_3", "digital_cost": 5205.55, "physical_cost": 1952.08, "cost_gap": 3253.47, "detour_ratio": 1.0, "blocked_ratio": 0.0, "gap_score": 0.25, "avg_physical_occ": 0.375, "n_physical_steps": 1, "coords": [[22.48503812447789, 113.91048472519157], [22.531067488915397, 113.91972755553992]]}, {"path_name": "高密度-低密度对照", "digital_cost": 7506.55, "physical_cost": 2852.49, "cost_gap": 4654.06, "detour_ratio": 1.0, "blocked_ratio": 0.0, "gap_score": 0.248, "avg_physical_occ": 0.38, "n_physical_steps": 1, "coords": [[22.53026008168123, 113.8925633130414], [22.56722103671782, 113.95373016627602]]}], "mean_gap_score": 0.251, "max_gap_score": 0.258, "gap_levels": {"low": 0, "medium": 4, "high": 0, "extreme": 0}, "interpretation": {"gap_score": "0=数字与物理完全吻合, 1=规划与现实完全脱节", "detour_ratio": ">1 表示物理路径比数字直线更长", "blocked_ratio": ">0 表示存在被数字认为可通行但物理高占用的路段"}};
+</script>
+</body>
+</html>

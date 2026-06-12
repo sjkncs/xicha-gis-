@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数字-物理对照验证 | 15分钟城市可达性幻觉分析</title>
+<style>
+:root {
+  --primary: #3B82F6;
+  --primary-dark: #2563EB;
+  --primary-light: #93C5FD;
+  --bg-base: #0F172A;
+  --bg-panel: #1E293B;
+  --bg-card: #334155;
+  --bg-hover: #475569;
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --border: #334155;
+  --green: #22C55E;
+  --yellow: #EAB308;
+  --orange: #F97316;
+  --red: #EF4444;
+  --purple: #A855F7;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+#header {
+  background: linear-gradient(135deg, #161b22, #1c2128);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 100;
+}
+#header h1 {
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(90deg, #58a6ff, #a371f7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.3px;
+}
+#refresh-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#refresh-btn:hover { background: var(--primary-dark); }
+
+/* ── Main layout ── */
+#main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Left panel ── */
+#left-panel {
+  width: 340px;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.panel-section {
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+}
+.panel-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+/* ── Score meter ── */
+#composite-score-wrap {
+  text-align: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+#composite-score-ring {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 12px;
+}
+#composite-score-ring svg {
+  transform: rotate(-90deg);
+}
+.score-ring-bg { stroke: var(--bg-card); stroke-width: 8; fill: none; }
+.score-ring-fg {
+  stroke-width: 8; fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s ease, stroke 0.5s ease;
+}
+#composite-score-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#composite-score-number {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+#composite-score-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+#composite-interpretation {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* ── Stats cards ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.stat-card {
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+}
+.stat-card-label { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; }
+.stat-card-value { font-size: 18px; font-weight: 700; }
+.stat-card-sub { font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
+
+/* ── Dimension bars ── */
+.dim-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.dim-label { font-size: 11px; color: var(--text-secondary); width: 16px; flex-shrink: 0; }
+.dim-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-card);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.dim-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s ease;
+}
+.dim-value { font-size: 11px; color: var(--text-secondary); width: 36px; text-align: right; flex-shrink: 0; }
+
+/* ── Path list ── */
+.path-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 6px;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+.path-item:hover { background: var(--bg-hover); }
+.path-item.active {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: var(--primary);
+}
+.path-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.path-name { font-size: 12px; font-weight: 600; color: var(--text-primary); line-height: 1.3; flex: 1; }
+.path-gap-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+.badge-low    { background: rgba(34,197,94,0.15); color: #22C55E; }
+.badge-medium { background: rgba(234,179,8,0.15); color: #EAB308; }
+.badge-high   { background: rgba(249,115,22,0.15); color: #F97316; }
+.badge-extreme { background: rgba(239,68,68,0.15); color: #EF4444; }
+
+.path-metrics {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.path-metric { display: flex; align-items: center; gap: 3px; }
+.path-metric .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+}
+
+/* ── Right panel ── */
+#right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+#map-container {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+#map-container iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* ── Evidence strip ── */
+#evidence-strip {
+  height: 180px;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 12px;
+}
+#evidence-strip::-webkit-scrollbar { height: 4px; }
+#evidence-strip::-webkit-scrollbar-thumb { background: var(--bg-hover); border-radius: 2px; }
+
+.evidence-card {
+  flex-shrink: 0;
+  width: 130px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-right: 8px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.evidence-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+.evidence-card.active { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+
+.ev-header {
+  background: rgba(59,130,246,0.1);
+  padding: 6px 8px;
+  font-size: 10px;
+  color: var(--primary-light);
+  display: flex;
+  justify-content: space-between;
+}
+.ev-walkability {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 8px 2px;
+  color: var(--text-primary);
+}
+.ev-desc {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 0 8px 6px;
+  line-height: 1.4;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.ev-footer {
+  padding: 4px 8px;
+  border-top: 1px solid var(--border);
+  font-size: 9px;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+}
+.ev-score-bar {
+  height: 3px;
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+/* ── Path detail panel ── */
+#path-detail {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(30,41,59,0.5);
+}
+#path-detail-name { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+#path-detail-metrics {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.detail-metric {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.detail-metric-label { color: var(--text-muted); }
+.detail-metric-value { font-weight: 700; }
+.detail-metric-value.low { color: var(--green); }
+.detail-metric-value.medium { color: var(--yellow); }
+.detail-metric-value.high { color: var(--orange); }
+.detail-metric-value.extreme { color: var(--red); }
+
+.gap-legend {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-muted); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── Empty state ── */
+#empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  gap: 12px;
+}
+#empty-state svg { opacity: 0.3; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>数字-物理对照验证 | 可达性幻觉评分</h1>
+  <button id="refresh-btn" onclick="loadData()">刷新数据</button>
+</div>
+
+<div id="main">
+  <!-- Left panel -->
+  <div id="left-panel">
+    <div id="composite-score-wrap">
+      <div id="composite-score-ring">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <circle class="score-ring-bg" cx="50" cy="50" r="40"/>
+          <circle class="score-ring-fg" id="score-ring" cx="50" cy="50" r="40"
+            stroke-dasharray="251.2" stroke-dashoffset="251.2"/>
+        </svg>
+        <div id="composite-score-value">
+          <span id="composite-score-number">--</span>
+          <span id="composite-score-label">幻觉分</span>
+        </div>
+      </div>
+      <div id="composite-interpretation">加载中...</div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">幻觉维度分解</div>
+      <div id="dim-bars"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">统计摘要</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-label">街景记录</div>
+          <div class="stat-card-value" id="stat-sv-records">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">独立采样点</div>
+          <div class="stat-card-value" id="stat-sv-points">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">验证路径</div>
+          <div class="stat-card-value" id="stat-paths">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">证据链节点</div>
+          <div class="stat-card-value" id="stat-evidence">--</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section" style="flex:1; overflow-y:auto;">
+      <div class="panel-title">路径验证结果</div>
+      <div class="gap-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#22C55E"></div>低</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#EAB308"></div>中</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#F97316"></div>高</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div>极高</div>
+      </div>
+      <div id="path-list" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <!-- Right panel -->
+  <div id="right-panel">
+    <div id="path-detail" style="display:none;"></div>
+    <div id="map-container">
+      <iframe id="map-frame" src="city_twin_viewer_3d.html" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
+    </div>
+    <div id="evidence-strip"></div>
+  </div>
+</div>
+
+<script>
+/**** DATA ****/
+let illusionData = null;
+let verifierData = null;
+let evidenceData = null;
+let activePathIdx = -1;
+let activeEvIdx = -1;
+
+/**** HELPERS ****/
+function gapClass(gap) {
+  if (gap < 0.15) return 'low';
+  if (gap < 0.35) return 'medium';
+  if (gap < 0.60) return 'high';
+  return 'extreme';
+}
+function gapColor(gap) {
+  if (gap < 0.15) return '#22C55E';
+  if (gap < 0.35) return '#EAB308';
+  if (gap < 0.60) return '#F97316';
+  return '#EF4444';
+}
+function gapLabel(gap) {
+  if (gap < 0.15) return '低幻觉';
+  if (gap < 0.35) return '中幻觉';
+  if (gap < 0.60) return '高幻觉';
+  return '极高幻觉';
+}
+function gapBadgeClass(gap) {
+  if (gap < 0.15) return 'badge-low';
+  if (gap < 0.35) return 'badge-medium';
+  if (gap < 0.60) return 'badge-high';
+  return 'badge-extreme';
+}
+function round1(v) { return v === null || v === undefined ? '--' : v.toFixed(2); }
+function round0(v) { return v === null || v === undefined ? '--' : Math.round(v); }
+
+/**** LOAD DATA ****/
+async function loadData() {
+  try {
+    const [illRes, verRes, evRes] = await Promise.all([
+      fetch('illusion_output/illusion_summary.json?t=' + Date.now()),
+      fetch('verifier_output/verification_summary.json?t=' + Date.now()),
+      fetch('verifier_output/evidence_chains.json?t=' + Date.now()),
+    ]);
+    illusionData = await illRes.json();
+    verifierData = await verRes.json();
+    evidenceData = await evRes.json();
+    renderAll();
+  } catch(e) {
+    console.error('Failed to load data:', e);
+  }
+}
+
+/**** RENDER ALL ****/
+function renderAll() {
+  renderCompositeScore();
+  renderDimBars();
+  renderStats();
+  renderPathList();
+  if (activePathIdx >= 0) {
+    renderPathDetail(activePathIdx);
+    renderEvidenceStrip(activePathIdx);
+  } else if (verifierData && verifierData.path_results && verifierData.path_results.length > 0) {
+    selectPath(0);
+  }
+}
+
+/**** COMPOSITE SCORE RING ****/
+function renderCompositeScore() {
+  const score = illusionData ? illusionData.composite_illusion_score : 0;
+  const ring = document.getElementById('score-ring');
+  const number = document.getElementById('composite-score-number');
+  const interp = document.getElementById('composite-interpretation');
+  const guide = illusionData ? illusionData.interpretation_guide : {};
+
+  // circumference = 2 * pi * 40 = 251.2
+  const circ = 251.2;
+  const offset = circ * (1 - score);
+  ring.style.strokeDashoffset = offset;
+  ring.style.stroke = gapColor(score);
+  number.textContent = score.toFixed(3);
+  number.style.color = gapColor(score);
+
+  // interpretation
+  let interpKey = '';
+  if (score < 0.15) interpKey = '0.00-0.15';
+  else if (score < 0.35) interpKey = '0.15-0.35';
+  else if (score < 0.60) interpKey = '0.35-0.60';
+  else interpKey = '0.60-1.00';
+  interp.textContent = guide[interpKey] || gapLabel(score);
+}
+
+/**** DIMENSION BARS ****/
+function renderDimBars() {
+  const container = document.getElementById('dim-bars');
+  if (!illusionData || !illusionData.dimensions) { container.innerHTML = ''; return; }
+  const dims = illusionData.dimensions;
+  const labels = [
+    { key: 'I_geometric',   label: 'I' },
+    { key: 'II_semantic',   label: 'II' },
+    { key: 'III_access',    label: 'III' },
+    { key: 'IV_experience', label: 'IV' },
+    { key: 'V_equity',      label: 'V' },
+  ];
+  container.innerHTML = labels.map(l => {
+    const dim = dims[l.key];
+    const val = dim && dim.score !== undefined ? dim.score : 0;
+    const color = gapColor(val);
+    return `<div class="dim-row">
+      <span class="dim-label">${l.label}</span>
+      <div class="dim-bar-wrap">
+        <div class="dim-bar-fill" style="width:${val*100}%;background:${color}"></div>
+      </div>
+      <span class="dim-value">${val.toFixed(2)}</span>
+    </div>`;
+  }).join('');
+}
+
+/**** STATS ****/
+function renderStats() {
+  if (!illusionData || !verifierData) return;
+  document.getElementById('stat-sv-records').textContent = round0(illusionData.sv_records);
+  document.getElementById('stat-sv-points').textContent = round0(illusionData.sv_unique_points);
+  document.getElementById('stat-paths').textContent = verifierData.statistics ? verifierData.statistics.total_paths : '--';
+  document.getElementById('stat-evidence').textContent = verifierData.statistics ? verifierData.statistics.total_evidence_points : '--';
+}
+
+/**** PATH LIST ****/
+function renderPathList() {
+  const container = document.getElementById('path-list');
+  if (!verifierData || !verifierData.path_results) { container.innerHTML = ''; return; }
+  container.innerHTML = verifierData.path_results.map((p, i) => {
+    const gc = gapClass(p.gap_score);
+    const gc2 = gapColor(p.gap_score);
+    const walk = p.avg_walkability;
+    const open = p.avg_openness;
+    const coverage = p.coverage_pct;
+    return `<div class="path-item ${i === activePathIdx ? 'active' : ''}" onclick="selectPath(${i})">
+      <div class="path-item-header">
+        <span class="path-name">${p.path_name}</span>
+        <span class="path-gap-badge ${gapBadgeClass(p.gap_score)}">${gapLabel(p.gap_score)} ${p.gap_score.toFixed(3)}</span>
+      </div>
+      <div class="path-metrics">
+        <span class="path-metric">
+          <span class="dot" style="background:${gapColor(p.gap_score)}"></span>
+          Gap ${p.gap_score.toFixed(2)}
+        </span>
+        <span class="path-metric">
+          <span style="color:${walk >= 6 ? '#22C55E' : walk >= 4 ? '#EAB308' : '#EF4444'}">&#9679;</span>
+          步行${walk !== null ? walk.toFixed(1) : '--'}/10
+        </span>
+        <span class="path-metric">
+          覆盖率 ${coverage.toFixed(0)}%
+        </span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/**** SELECT PATH ****/
+function selectPath(idx) {
+  activePathIdx = idx;
+  // Update active state in list
+  document.querySelectorAll('.path-item').forEach((el, i) => {
+    el.classList.toggle('active', i === idx);
+  });
+  renderPathDetail(idx);
+  renderEvidenceStrip(idx);
+  // Fly Cesium to path
+  if (evidenceData && evidenceData[idx]) {
+    const chain = evidenceData[idx];
+    if (chain.coords && chain.coords.length > 0) {
+      const mid = Math.floor(chain.coords.length / 2);
+      const c = chain.coords[mid];
+      flyToLocation(c[0], c[1]);
+    }
+  }
+}
+
+/**** PATH DETAIL ****/
+function renderPathDetail(idx) {
+  const detail = document.getElementById('path-detail');
+  if (!verifierData || !verifierData.path_results) return;
+  const p = verifierData.path_results[idx];
+  if (!p) return;
+  const gc = gapClass(p.gap_score);
+  detail.style.display = 'block';
+  detail.innerHTML = `
+    <div id="path-detail-name">${p.path_name}</div>
+    <div id="path-detail-metrics">
+      <div class="detail-metric">
+        <span class="detail-metric-label">Gap分</span>
+        <span class="detail-metric-value ${gc}">${p.gap_score.toFixed(3)}</span>
+      </div>
+      <div class="detail-metric">
+        <span class="detail-metric-label">步行性</span>
+        <span class="detail-metric-value ${p.avg_walkability >= 6 ? 'low' : p.avg_walkability >= 4 ? 'medium' : 'high'}">${p.avg_walkability !== null ? p.avg_walkability.toFixed(1) + '/10' : '--'}</span>
+      </div>
+      <div class="detail-metric">
+        <span class="detail-metric-label">开放度</span>
+        <span class="detail-metric-value">${p.avg_openness !== null ? p.avg_openness.toFixed(1) + '/10' : '--'}</span>
+      </div>
+      <div class="detail-metric">
+        <span class="detail-metric-label">峡谷感</span>
+        <span class="detail-metric-value ${p.avg_canyon >= 7 ? 'high' : p.avg_canyon >= 5 ? 'medium' : 'low'}">${p.avg_canyon !== null ? p.avg_canyon.toFixed(1) + '/10' : '--'}</span>
+      </div>
+      <div class="detail-metric">
+        <span class="detail-metric-label">密度</span>
+        <span class="detail-metric-value">${p.avg_density !== null ? p.avg_density.toFixed(1) + '/10' : '--'}</span>
+      </div>
+      <div class="detail-metric">
+        <span class="detail-metric-label">覆盖率</span>
+        <span class="detail-metric-value">${p.coverage_pct.toFixed(1)}%</span>
+      </div>
+      <div class="detail-metric">
+        <span class="detail-metric-label">证据质量</span>
+        <span class="detail-metric-value">${(p.evidence_quality * 100).toFixed(1)}%</span>
+      </div>
+    </div>
+    <div class="gap-legend">
+      <span style="font-size:11px;color:var(--text-muted);font-style:italic">${p.interpretation}</span>
+    </div>`;
+}
+
+/**** EVIDENCE STRIP ****/
+function renderEvidenceStrip(idx) {
+  const strip = document.getElementById('evidence-strip');
+  if (!evidenceData || !evidenceData[idx]) { strip.innerHTML = ''; return; }
+  const chain = evidenceData[idx];
+  const pts = chain.evidence_points || [];
+  if (pts.length === 0) {
+    strip.innerHTML = '<div style="color:var(--text-muted);font-size:12px;padding:0 12px">无匹配街景证据点</div>';
+    return;
+  }
+  strip.innerHTML = pts.map((pt, i) => {
+    const walk = pt.walkability;
+    const walkColor = walk >= 7 ? '#22C55E' : walk >= 5 ? '#EAB308' : walk >= 3 ? '#F97316' : '#EF4444';
+    const walkBar = walk !== null ? (walk / 10 * 100) : 0;
+    const open = pt.openness !== null ? pt.openness : 0;
+    const openColor = open >= 6 ? '#22C55E' : open >= 4 ? '#EAB308' : '#EF4444';
+    const dist = pt.distance_m !== undefined ? pt.distance_m : '--';
+    const heading = pt.heading || '--';
+    const desc = pt.description_zh || '';
+    const urban = pt.urban_form || '';
+    return `<div class="evidence-card ${i === activeEvIdx ? 'active' : ''}" onclick="selectEvidence(${idx},${i})">
+      <div class="ev-header">
+        <span>${dist}m</span>
+        <span>${heading}</span>
+      </div>
+      <div class="ev-walkability" style="color:${walkColor}">${walk !== null ? walk.toFixed(1) : '--'}/10</div>
+      <div class="ev-bar-label" style="font-size:9px;color:var(--text-muted);padding:0 8px">步行性</div>
+      <div style="padding:2px 8px">
+        <div style="height:3px;background:var(--bg-base);border-radius:2px">
+          <div style="height:100%;width:${walkBar}%;background:${walkColor};border-radius:2px"></div>
+        </div>
+      </div>
+      <div class="ev-desc">${desc}</div>
+      <div class="ev-footer">
+        <span>${urban}</span>
+        <span style="color:${openColor}">开放${open.toFixed(0)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/**** SELECT EVIDENCE ****/
+function selectEvidence(pathIdx, evIdx) {
+  activeEvIdx = evIdx;
+  document.querySelectorAll('.evidence-card').forEach((el, i) => {
+    el.classList.toggle('active', i === evIdx);
+  });
+  if (evidenceData && evidenceData[pathIdx]) {
+    const pt = evidenceData[pathIdx].evidence_points[evIdx];
+    if (pt) {
+      flyToLocation(pt.lon, pt.lat);
+    }
+  }
+}
+
+/**** CESIUM FLY TO ****/
+function flyToLocation(lng, lat) {
+  try {
+    const frame = document.getElementById('map-frame');
+    if (frame && frame.contentWindow && frame.contentWindow.viewer) {
+      frame.contentWindow.viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(lng, lat, 800),
+        duration: 1.5,
+      });
+    }
+  } catch(e) {
+    // Cesium may not be loaded yet or blocked by sandbox
+    console.warn('Cannot fly to Cesium:', e);
+  }
+}
+
+/**** INIT ****/
+window.addEventListener('load', loadData);
+</script>
+</body>
+</html>
