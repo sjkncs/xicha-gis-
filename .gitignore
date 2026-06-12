@@ -58,3 +58,6 @@ temp_paths*.txt
 yolo11x_local.pt
 streetview-analysis/gpu_scripts/segformer_b3_ade/pytorch_model.bin
 streetview-analysis/city_twin_output/city_twin_viewer.html
+
+# RAR 压缩包（太大，不上传）
+*.rar
